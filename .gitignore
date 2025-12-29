@@ -1,0 +1,5 @@
+# Ignore build directory
+_build/
+
+# Ignore commitlint executable
+tools/commitlint*
