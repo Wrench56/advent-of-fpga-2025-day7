@@ -7,3 +7,10 @@ let bits_of_string_be ~width (s : string) : Bits.t =
     ~width
     ((fun s -> String.fold s ~init:0 ~f:(fun acc c -> (acc lsl 8) lor Char.to_int c)) s)
 ;;
+
+let cycle sim n =
+  assert (n > 0);
+  for _ = 1 to n do
+    Cyclesim.cycle sim
+  done
+;;
