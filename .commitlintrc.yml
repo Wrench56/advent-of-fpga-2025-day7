@@ -26,6 +26,7 @@ rules:
       - ram
       - counter
       - slatch
+      - pingpong
   subject-empty:
     level: error
   type:
