@@ -2,7 +2,6 @@ open Base
 open Hardcaml
 open Hardcaml_waveterm
 open Solution.Pingpong
-open Utils
 
 let testbench () =
   let data_width = 32 in
@@ -18,12 +17,10 @@ let testbench () =
   let waves, sim = Waveform.create sim in
   let inputs = Cyclesim.inputs sim in
   let _outputs = Cyclesim.outputs sim in
-  let cycle n =
-    for _ = 1 to n do
-      Cyclesim.cycle sim
-    done
+  let cycle n = Utils.cycle sim n in
+  let set_buffer value =
+    inputs.input := Utils.bits_of_string_be ~width:data_width value
   in
-  let set_buffer value = inputs.input := bits_of_string_be ~width:data_width value in
   let set_zero () = inputs.input := Bits.of_int ~width:data_width 0 in
   let enable () = inputs.enable := Bits.vdd in
   let disable () = inputs.enable := Bits.gnd in

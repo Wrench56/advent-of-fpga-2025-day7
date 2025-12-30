@@ -2,7 +2,6 @@ open Base
 open Hardcaml
 open Hardcaml_waveterm
 open Solution.Bram
-open Utils
 
 let testbench () =
   let data_width = 32 in
@@ -20,6 +19,7 @@ let testbench () =
   let waves, sim = Waveform.create sim in
   let inputs = Cyclesim.inputs sim in
   let outputs = Cyclesim.outputs sim in
+  let cycle n = Utils.cycle sim n in
   let read ~addr =
     inputs.read_enable := Bits.vdd;
     inputs.read_addr := addr |> Bits.of_int ~width:addr_width
@@ -29,14 +29,14 @@ let testbench () =
     inputs.write_addr := addr |> Bits.of_int ~width:addr_width;
     inputs.write_data := data
   in
-  write ~addr:0x1 ~data:(bits_of_string_be ~width:data_width "Hell");
+  write ~addr:0x1 ~data:(Utils.bits_of_string_be ~width:data_width "Hell");
   read ~addr:0x1;
-  Cyclesim.cycle sim;
+  cycle 1;
   (* Write is done *)
-  Cyclesim.cycle sim;
+  cycle 1;
   (* Read is done *)
   write ~addr:0x2 ~data:!(outputs.read_data);
-  Cyclesim.cycle sim;
+  cycle 1;
   waves
 ;;
 

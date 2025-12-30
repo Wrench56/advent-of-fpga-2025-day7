@@ -34,7 +34,7 @@ let testbench () =
       Queue.enqueue addresses addr;
       let delayed_addr = Queue.dequeue_exn addresses in
       inputs.read_data := memory.(delayed_addr) |> Bits.of_int ~width:data_width;
-      Cyclesim.cycle sim
+      Utils.cycle sim 1
     done
   in
   let reset () =
