@@ -28,6 +28,7 @@ rules:
       - slatch
       - pingpong
       - utils
+      - popcntr
   subject-empty:
     level: error
   type:
