@@ -25,6 +25,7 @@ rules:
       - tools
       - ram
       - counter
+      - slatch
   subject-empty:
     level: error
   type:
