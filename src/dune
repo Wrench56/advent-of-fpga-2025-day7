@@ -1,6 +1,6 @@
 (library
  (name solution)
  (libraries core hardcaml)
- (modules bram)
+ (modules bram counter)
  (preprocess
   (pps ppx_hardcaml ppx_jane)))
