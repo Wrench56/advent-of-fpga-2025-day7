@@ -24,6 +24,7 @@ rules:
       - license
       - tools
       - ram
+      - counter
   subject-empty:
     level: error
   type:
