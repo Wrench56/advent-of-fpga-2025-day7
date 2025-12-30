@@ -2,6 +2,7 @@ open Base
 open Hardcaml
 open Hardcaml_waveterm
 open Solution.Bram
+open Utils
 
 let testbench () =
   let data_width = 32 in
@@ -19,12 +20,6 @@ let testbench () =
   let waves, sim = Waveform.create sim in
   let inputs = Cyclesim.inputs sim in
   let outputs = Cyclesim.outputs sim in
-  (* TODO: There has to be a built-in function for this... *)
-  let bits_of_string_be ~width (s : string) : Bits.t =
-    Bits.of_int
-      ~width
-      ((fun s -> String.fold s ~init:0 ~f:(fun acc c -> (acc lsl 8) lor Char.to_int c)) s)
-  in
   let read ~addr =
     inputs.read_enable := Bits.vdd;
     inputs.read_addr := addr |> Bits.of_int ~width:addr_width
