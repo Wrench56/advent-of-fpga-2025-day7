@@ -27,6 +27,7 @@ rules:
       - counter
       - slatch
       - pingpong
+      - utils
   subject-empty:
     level: error
   type:
