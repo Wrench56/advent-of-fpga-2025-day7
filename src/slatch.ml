@@ -14,14 +14,14 @@ struct
       { clock : 'a
       ; reset : 'a
       ; next : 'a
-      ; read_data : 'a [@bits Config.data_width]
+      ; input: 'a [@bits Config.data_width]
       }
     [@@deriving hardcaml]
   end
 
   module O = struct
     type 'a t =
-      { write_data : 'a [@bits Config.data_width]
+      { output: 'a [@bits Config.data_width]
       ; addr : 'a [@bits addr_width]
       ; ready : 'a
       }
@@ -59,8 +59,8 @@ struct
         scope
         { AddrCntr.I.clock = i.clock; clear = i.reset; increment = accept }
     in
-    let latch = reg spec ~enable:rdy_pulse i.read_data in
-    { O.write_data = latch; addr = addrcntr.count; ready = rdy_pulse }
+    let latch = reg spec ~enable:rdy_pulse i.input in
+    { O.output = latch; addr = addrcntr.count; ready = rdy_pulse }
   ;;
 
   let hierarchical (scope : Scope.t) (input : Signal.t I.t) =
