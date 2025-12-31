@@ -28,7 +28,7 @@ struct
 
   let create (_scope : Scope.t) (i : Signal.t I.t) : Signal.t O.t =
     let open Signal in
-    { O.count = mux2 i.enable (popcount i.data) (zero cntr_width)
+    { O.count = mux2 i.enable (uresize (popcount i.data) cntr_width) (zero cntr_width)
     ; ready = vdd &: i.enable
     }
   ;;
