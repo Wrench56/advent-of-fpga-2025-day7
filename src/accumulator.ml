@@ -21,7 +21,11 @@ struct
   end
 
   module O = struct
-    type 'a t = { sum : 'a [@bits reg_size] } [@@deriving hardcaml]
+    type 'a t =
+      { sum : 'a [@bits reg_size]
+      ; ready : 'a
+      }
+    [@@deriving hardcaml]
   end
 
   let create (_scope : Scope.t) (i : Signal.t I.t) : Signal.t O.t =
@@ -39,7 +43,8 @@ struct
           mux2 (acc >: room) maxv next)
         else next)
     in
-    { O.sum = acc }
+    (* Ready signal is unused for now. Use if latency ever increases *)
+    { O.sum = acc; ready = Signal.vdd }
   ;;
 
   let hierarchical (scope : Scope.t) (input : Signal.t I.t) =
