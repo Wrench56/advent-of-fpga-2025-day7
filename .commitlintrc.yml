@@ -30,6 +30,7 @@ rules:
       - utils
       - popcntr
       - accu
+      - logic_one
   subject-empty:
     level: error
   type:
