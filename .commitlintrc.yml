@@ -29,6 +29,7 @@ rules:
       - pingpong
       - utils
       - popcntr
+      - accu
   subject-empty:
     level: error
   type:
