@@ -14,14 +14,14 @@ struct
       { clock : 'a
       ; reset : 'a
       ; next : 'a
-      ; input: 'a [@bits Config.data_width]
+      ; input : 'a [@bits Config.data_width]
       }
     [@@deriving hardcaml]
   end
 
   module O = struct
     type 'a t =
-      { output: 'a [@bits Config.data_width]
+      { output : 'a [@bits Config.data_width]
       ; addr : 'a [@bits addr_width]
       ; ready : 'a
       }
@@ -52,7 +52,9 @@ struct
     (* TODO: There must be a more idiomatic way to do this with feedback registers... *)
     let busy = reg spec ~enable:Signal.vdd busy_d in
     let accept = i.next &: ~:busy in
-    let rdy_pulse = pipeline spec ~enable:Signal.vdd ~n:(Config.mem_fetch_delay + 1) accept in
+    let rdy_pulse =
+      pipeline spec ~enable:Signal.vdd ~n:(Config.mem_fetch_delay + 1) accept
+    in
     Signal.assign busy_d (busy |: accept &: ~:rdy_pulse);
     let addrcntr =
       AddrCntr.hierarchical
@@ -60,7 +62,8 @@ struct
         { AddrCntr.I.clock = i.clock; clear = i.reset; increment = accept }
     in
     let latch = reg spec ~enable:rdy_pulse i.input in
-    { O.output = latch; addr = addrcntr.count; ready = rdy_pulse }
+    let data_rdy = pipeline spec ~enable: Signal.vdd ~n:1 rdy_pulse in
+    { O.output = latch; addr = addrcntr.count; ready = data_rdy }
   ;;
 
   let hierarchical (scope : Scope.t) (input : Signal.t I.t) =
