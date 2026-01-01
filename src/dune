@@ -1,6 +1,6 @@
 (library
  (name solution)
  (libraries core hardcaml)
- (modules bram counter slatch pingpong popcntr accumulator)
+ (modules bram counter slatch pingpong popcntr accumulator logic_one)
  (preprocess
   (pps ppx_hardcaml ppx_jane)))
