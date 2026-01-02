@@ -27,11 +27,8 @@ struct
     let spec = Reg_spec.create ~clock:i.clock ~clear:i.clear () in
     let maxv = max_num |> of_int ~width:data_width in
     let counter =
-      (* TODO: Figure out the default overflow behaviour of feedback registers *)
       reg_fb spec ~enable:i.increment ~width:data_width ~f:(fun c ->
-        if Config.saturating
-        then mux2 (c ==: maxv) c (c +:. 1)
-        else mux2 (c ==: maxv) (zero data_width) (c +:. 1))
+        if Config.saturating then mux2 (c ==: maxv) c (c +:. 1) else c +:. 1)
     in
     { O.count = counter }
   ;;
