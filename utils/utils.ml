@@ -1,11 +1,14 @@
 open Base
 open Hardcaml
 
-(* TODO: There has to be a built-in function for this... *)
 let bits_of_string_be ~width (s : string) : Bits.t =
-  Bits.of_int
-    ~width
-    ((fun s -> String.fold s ~init:0 ~f:(fun acc c -> (acc lsl 8) lor Char.to_int c)) s)
+  let bits =
+    s
+    |> String.to_list
+    |> List.map ~f:(fun c -> Bits.of_int ~width:8 (Char.to_int c))
+    |> Bits.concat_msb
+  in
+  Bits.uresize bits width
 ;;
 
 let cycle sim n =
