@@ -32,6 +32,7 @@ rules:
       - accu
       - logic_one
       - adder
+      - stencil
   subject-empty:
     level: error
   type:
