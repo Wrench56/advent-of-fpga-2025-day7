@@ -23,17 +23,9 @@ rules:
       - readme
       - license
       - tools
-      - ram
-      - counter
-      - slatch
-      - pingpong
-      - utils
-      - popcntr
-      - accu
-      - logic_one
-      - adder
+      - common
       - stencil
-      - stencil-simd
+      - engine
   subject-empty:
     level: error
   type:
