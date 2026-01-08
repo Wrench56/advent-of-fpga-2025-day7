@@ -1,5 +1,6 @@
 open Base
 open Hardcaml
+open Common
 
 module Make_Stencil (Config : sig
     val data_width : int

@@ -1,0 +1,7 @@
+(library
+ (name test_stencil)
+ (libraries core hardcaml solution
+   hardcaml_waveterm utils)
+ (preprocess
+  (pps ppx_hardcaml ppx_jane))
+ (inline_tests))

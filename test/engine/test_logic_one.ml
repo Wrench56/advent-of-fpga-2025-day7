@@ -1,7 +1,7 @@
 open Base
 open Hardcaml
 open Hardcaml_waveterm
-open Solution.Logic_one
+open Solution.Engine.Logic_one
 
 let%expect_test "Part 1 Solver Engine works as expected!" =
   let data_width = 16 in

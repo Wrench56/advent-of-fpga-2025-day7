@@ -1,0 +1,5 @@
+(library
+ (name stencilblocks)
+ (libraries base hardcaml common)
+ (preprocess
+  (pps ppx_hardcaml ppx_jane)))

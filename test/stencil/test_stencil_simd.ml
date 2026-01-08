@@ -1,6 +1,6 @@
 open Base
 open Hardcaml
-open Solution.Stencil_simd
+open Solution.Stencil.Stencil_simd
 
 let testbench_fuzz () =
   let data_width = 16 in

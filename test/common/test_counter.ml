@@ -1,7 +1,7 @@
 open Base
 open Hardcaml
 open Hardcaml_waveterm
-open Solution.Counter
+open Solution.Common.Counter
 
 let testbench ~saturating =
   let max_num = 7 in

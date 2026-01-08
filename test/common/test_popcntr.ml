@@ -1,7 +1,7 @@
 open Base
 open Hardcaml
 open Hardcaml_waveterm
-open Solution.Popcntr
+open Solution.Common.Popcntr
 
 let testbench data_width =
   let scope = Scope.create ~flatten_design:true () in

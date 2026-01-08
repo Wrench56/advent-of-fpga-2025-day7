@@ -1,7 +1,7 @@
 open Base
 open Hardcaml
 open Hardcaml_waveterm
-open Solution.Adder
+open Solution.Common.Adder
 
 let run_adder ~num_inputs ~add_width ~ops =
   let scope = Scope.create ~flatten_design:true () in

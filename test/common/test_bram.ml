@@ -1,7 +1,7 @@
 open Base
 open Hardcaml
 open Hardcaml_waveterm
-open Solution.Bram
+open Solution.Common.Bram
 
 let testbench () =
   let data_width = 32 in

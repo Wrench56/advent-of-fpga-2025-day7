@@ -1,7 +1,7 @@
 open Base
 open Hardcaml
 open Hardcaml_waveterm
-open Solution.Slatch
+open Solution.Engine.Slatch
 
 let testbench () =
   let data_width = 8 in

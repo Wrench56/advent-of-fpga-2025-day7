@@ -1,7 +1,7 @@
 open Base
 open Hardcaml
 open Hardcaml_waveterm
-open Solution.Accumulator
+open Solution.Common.Accumulator
 
 let testbench ~saturating =
   let max_value = 255 + 1 in

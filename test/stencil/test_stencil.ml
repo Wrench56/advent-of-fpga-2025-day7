@@ -1,7 +1,7 @@
 open Base
 open Hardcaml
 open Hardcaml_waveterm
-open Solution.Stencil
+open Solution.Stencil.Stencil
 
 let testbench () =
   let data_width = 16 in
