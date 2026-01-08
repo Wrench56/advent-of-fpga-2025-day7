@@ -33,6 +33,7 @@ rules:
       - logic_one
       - adder
       - stencil
+      - stencil-simd
   subject-empty:
     level: error
   type:
