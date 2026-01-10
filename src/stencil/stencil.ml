@@ -12,6 +12,7 @@ struct
       { clock : 'a
       ; clear : 'a
       ; enable : 'a
+      ; boot : 'a
       ; hit_range : 'a [@bits 3]
       ; nw : 'a [@bits Config.data_width]
       ; no : 'a [@bits Config.data_width]
@@ -52,10 +53,10 @@ struct
         }
     in
     let open Signal in
-    { cell = adder.sum
+    { cell = mux2 i.boot (uresize i.hit_range.:[1, 1] Config.data_width) adder.sum
     ; overflow =
         mux2 (adder.carry >: zero (Signal.width adder.carry)) Signal.vdd Signal.gnd
-    ; ready = adder.ready
+    ; ready = mux2 i.boot Signal.vdd adder.ready
     }
   ;;
 

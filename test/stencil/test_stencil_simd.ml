@@ -19,7 +19,9 @@ let testbench_fuzz () =
   let cycle n = Utils.cycle sim n in
   let enable () = inputs.enable := Bits.vdd in
   let disable () = inputs.enable := Bits.gnd in
+  let boot state = inputs.boot := Bits.of_bool state in
   let clear () =
+    boot false;
     inputs.clear := Bits.vdd;
     cycle 1;
     inputs.clear := Bits.gnd
@@ -40,13 +42,14 @@ let testbench_fuzz () =
         (inputs : Bits.t ref TestStencilSIMD.I.t)
         (outputs : Bits.t ref TestStencilSIMD.O.t)
     =
-    let () = Stdio.printf "Enabled  | Ready | OVF   |\n" in
+    let () = Stdio.printf "Enabled  | Ready | OVF   | Boot  |\n" in
     let () =
       Stdio.printf
-        "%5b    | %5b | %5b |\n"
+        "%5b    | %5b | %5b | %5b |\n"
         (Bits.to_bool !(inputs.enable))
         (Bits.to_bool !(outputs.ready))
         (Bits.to_bool !(outputs.overflow))
+        (Bits.to_bool !(inputs.boot))
     in
     let () = Stdio.printf "Lane     | NW    | NO    | NE    | HIT | OUTPUT |\n" in
     for i = 0 to simd_width - 1 do
@@ -92,6 +95,9 @@ let testbench_fuzz () =
     ; { nw = 52780; no = 60937; ne = 43694 }
     ; { nw = 1203; no = 1020; ne = 0 }
     ];
+  verif_print inputs outputs;
+  boot true;
+  cycle 1;
   verif_print inputs outputs
 ;;
 
@@ -99,8 +105,8 @@ let%expect_test "Stencil SIMD works as expected" =
   let () = testbench_fuzz () in
   [%expect
     {|
-Enabled  | Ready | OVF   |
-false    | false | false |
+Enabled  | Ready | OVF   | Boot  |
+false    | false | false | false |
 Lane     | NW    | NO    | NE    | HIT | OUTPUT |
 Lane   0 | 65535 | 65535 | 65535 | 101 |      0 |
 Lane   1 | 65535 | 65535 | 65535 | 101 |      0 |
@@ -108,8 +114,8 @@ Lane   2 | 65535 | 65535 | 65535 | 101 |      0 |
 Lane   3 | 65535 | 65535 | 65535 | 101 |      0 |
 =================================================
 
-Enabled  | Ready | OVF   |
- true    |  true |  true |
+Enabled  | Ready | OVF   | Boot  |
+ true    |  true |  true | false |
 Lane     | NW    | NO    | NE    | HIT | OUTPUT |
 Lane   0 | 65535 | 65535 | 65535 | 101 |  65533 |
 Lane   1 | 65535 | 65535 | 65535 | 101 |  65533 |
@@ -117,8 +123,8 @@ Lane   2 | 65535 | 65535 | 65535 | 101 |  65533 |
 Lane   3 | 65535 | 65535 | 65535 | 101 |  65533 |
 =================================================
 
-Enabled  | Ready | OVF   |
- true    |  true | false |
+Enabled  | Ready | OVF   | Boot  |
+ true    |  true | false | false |
 Lane     | NW    | NO    | NE    | HIT | OUTPUT |
 Lane   0 |     1 |     2 |     3 | 101 |      6 |
 Lane   1 |     1 |     2 |     3 | 101 |      6 |
@@ -126,8 +132,8 @@ Lane   2 |     1 |     2 |     3 | 101 |      6 |
 Lane   3 |     1 |     2 |     3 | 101 |      6 |
 =================================================
 
-Enabled  | Ready | OVF   |
- true    |  true | false |
+Enabled  | Ready | OVF   | Boot  |
+ true    |  true | false | false |
 Lane     | NW    | NO    | NE    | HIT | OUTPUT |
 Lane   0 | 65535 | 65535 | 65535 | 010 |      0 |
 Lane   1 | 65535 | 65535 | 65535 | 010 |      0 |
@@ -135,13 +141,22 @@ Lane   2 | 65535 | 65535 | 65535 | 010 |      0 |
 Lane   3 | 65535 | 65535 | 65535 | 010 |      0 |
 =================================================
 
-Enabled  | Ready | OVF   |
- true    |  true |  true |
+Enabled  | Ready | OVF   | Boot  |
+ true    |  true |  true | false |
 Lane     | NW    | NO    | NE    | HIT | OUTPUT |
 Lane   0 |     1 |     2 |     3 | 110 |      1 |
 Lane   1 |   102 |    10 |     1 | 011 |      1 |
 Lane   2 | 52780 | 60937 | 43694 | 101 |  26339 |
 Lane   3 |  1203 |  1020 |     0 | 100 |   2223 |
+=================================================
+
+Enabled  | Ready | OVF   | Boot  |
+ true    |  true |  true |  true |
+Lane     | NW    | NO    | NE    | HIT | OUTPUT |
+Lane   0 |     1 |     2 |     3 | 110 |      1 |
+Lane   1 |   102 |    10 |     1 | 011 |      1 |
+Lane   2 | 52780 | 60937 | 43694 | 101 |      0 |
+Lane   3 |  1203 |  1020 |     0 | 100 |      0 |
 =================================================
 |}]
 ;;

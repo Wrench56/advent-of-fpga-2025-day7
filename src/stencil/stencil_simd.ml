@@ -20,6 +20,7 @@ struct
       { clock : 'a
       ; clear : 'a
       ; enable : 'a
+      ; boot : 'a
       ; ccurr : 'a StencilLane.t array [@length Config.simd_width]
       ; hit_range : 'a array [@length Config.simd_width] [@bits 3]
       }
@@ -49,6 +50,7 @@ struct
           { clock = i.clock
           ; clear = i.clear
           ; enable = i.enable
+          ; boot = i.boot
           ; hit_range = i.hit_range.(n)
           ; nw = i.ccurr.(n).nw
           ; no = i.ccurr.(n).no
