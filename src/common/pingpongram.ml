@@ -8,7 +8,8 @@ module Make_PingPongRAM (Config : sig
     val mem_write_delay : int
   end) =
 struct
-  let addr_width = Config.data_depth * 2 |> Int.ceil_log2
+  let addr_width = Int.ceil_log2 Config.data_depth
+  let bank_addr_width = Config.data_depth * 2 |> Int.ceil_log2
 
   module I = struct
     type 'a t =
@@ -68,7 +69,7 @@ struct
         let toggle = i.swap &: ~:prev &: rw_ready in
         mux2 toggle ~:sel sel)
     in
-    let half_offset = of_int ~width:addr_width Config.data_depth in
+    let half_offset = of_int ~width:bank_addr_width Config.data_depth in
     let backing_mem =
       BRAM.hierarchical
         scope
@@ -76,9 +77,11 @@ struct
         ; write_enable = write_accept
         ; read_enable = read_accept
         ; write_addr =
-            i.write_addr +: mux2 (ff_sel &: rw_ready) half_offset (zero addr_width)
+            uresize i.write_addr bank_addr_width
+            +: mux2 (ff_sel &: rw_ready) half_offset (zero bank_addr_width)
         ; read_addr =
-            i.read_addr +: mux2 (ff_sel &: rw_ready) (zero addr_width) half_offset
+            uresize i.read_addr bank_addr_width
+            +: mux2 (ff_sel &: rw_ready) (zero bank_addr_width) half_offset
         ; write_data = i.input
         }
     in
