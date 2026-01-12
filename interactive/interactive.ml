@@ -22,6 +22,11 @@ module Testbench = struct
       ; testbench = Test.Engine.Test_logic_one.testbench
       ; config = None
       }
+    ; { name = "manifold_engine"
+      ; description = "Manifold Engine (AoC 2025 Day 7 Part 2) Simulation"
+      ; testbench = Test.Engine.Test_manifold_engine.testbench
+      ; config = Some { wave_width = 2; signals_width = 30; values_width = 34 }
+      }
     ]
   ;;
 
