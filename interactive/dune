@@ -1,0 +1,11 @@
+(executable
+  (name interactive)
+  (modules interactive)
+  (libraries
+    hardcaml
+    hardcaml_waveterm.interactive
+    stdlib
+    test)
+  (preprocess
+    (pps ppx_jane))
+  )
