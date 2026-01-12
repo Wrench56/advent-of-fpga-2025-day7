@@ -2,7 +2,7 @@ open Base
 open Hardcaml
 open Solution.Stencil.Stencil_simd
 
-let testbench_fuzz () =
+let testbench () =
   let data_width = 16 in
   let simd_width = 4 in
   let scope = Scope.create ~flatten_design:true () in
@@ -30,7 +30,7 @@ let testbench_fuzz () =
     assert (List.length hitl = simd_width);
     assert (List.length ccurrl = simd_width);
     List.iteri hitl ~f:(fun i hit ->
-      inputs.hit_range.(i) := List.rev hit |> List.map ~f:Bool.to_int |> Bits.of_bit_list);
+      inputs.hit_range.(i) := List.map hit ~f:Bool.to_int |> Bits.of_bit_list);
     List.iteri ccurrl ~f:(fun i { nw; no; ne } ->
       let lane = inputs.ccurr.(i) in
       lane.nw := Bits.of_int ~width:data_width nw;
@@ -59,9 +59,9 @@ let testbench_fuzz () =
         (Bits.to_int !(inputs.ccurr.(i).nw))
         (Bits.to_int !(inputs.ccurr.(i).no))
         (Bits.to_int !(inputs.ccurr.(i).ne))
-        (Bits.to_int (Bits.bit !(inputs.hit_range.(i)) 0))
-        (Bits.to_int (Bits.bit !(inputs.hit_range.(i)) 1))
         (Bits.to_int (Bits.bit !(inputs.hit_range.(i)) 2))
+        (Bits.to_int (Bits.bit !(inputs.hit_range.(i)) 1))
+        (Bits.to_int (Bits.bit !(inputs.hit_range.(i)) 0))
         (Bits.to_int !(outputs.cnext.(i)))
     done;
     Stdio.printf "=================================================\n\n"
@@ -102,7 +102,7 @@ let testbench_fuzz () =
 ;;
 
 let%expect_test "Stencil SIMD works as expected" =
-  let () = testbench_fuzz () in
+  let () = testbench () in
   [%expect
     {|
 Enabled  | Ready | OVF   | Boot  |

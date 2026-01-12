@@ -27,7 +27,7 @@ let testbench () =
     inputs.clear := Bits.gnd
   in
   let drive_stencil hitl ccurrl =
-    inputs.hit_range := List.rev hitl |> Bits.of_bit_list;
+    inputs.hit_range := Bits.of_bit_list hitl;
     inputs.nw := List.nth_exn ccurrl 0 |> Bits.of_int ~width:data_width;
     inputs.no := List.nth_exn ccurrl 1 |> Bits.of_int ~width:data_width;
     inputs.ne := List.nth_exn ccurrl 2 |> Bits.of_int ~width:data_width;
@@ -69,7 +69,7 @@ let%expect_test "Combinational Stencil works as expected" =
 │boot              ││                                                            ┌───────────┐     │
 │                  ││────────────────────────────────────────────────────────────┘           └─────│
 │                  ││────────────┬─────┬─────┬─────┬─────┬─────┬───────────┬─────┬─────┬─────┬─────│
-│hit_range         ││ 0          │7    │5    │6    │1    │7    │5          │2    │5    │2    │5    │
+│hit_range         ││ 0          │7    │5    │3    │4    │7    │5          │2    │5    │2    │5    │
 │                  ││────────────┴─────┴─────┴─────┴─────┴─────┴───────────┴─────┴─────┴─────┴─────│
 │                  ││────────────┬─────────────────────────────┬───────────────────────────────────│
 │ne                ││ 0000       │0003                         │FFFF                               │
