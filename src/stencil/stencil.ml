@@ -46,9 +46,9 @@ struct
         ; enable = i.enable
         ; clear = i.clear
         ; nums =
-            [| mux2 i.hit_range.:[0, 0] i.nw zero_sig
+            [| mux2 i.hit_range.:[2, 2] i.nw zero_sig
              ; mux2 i.hit_range.:[1, 1] zero_sig i.no
-             ; mux2 i.hit_range.:[2, 2] i.ne zero_sig
+             ; mux2 i.hit_range.:[0, 0] i.ne zero_sig
             |]
         }
     in
