@@ -140,9 +140,7 @@ struct
               ; state.set_next FetchBeamsWait
               ] )
           ; ( FetchBeamsWait
-            , [ slatch_next_cycle <--. 0
-              ; incr_internal_cntr <--. 0
-              ; when_
+            , [ when_
                   slatch.ready
                   [ beams_next <-- slatch.output
                   ; swap_imp <--. 1
@@ -150,21 +148,15 @@ struct
                   ]
               ] )
           ; ( FetchSplitters
-            , [ popcount_finished <--. 0
-              ; if_
+            , [ if_
                   (internal_cntr.count <:. Config.data_depth - 1)
-                  [ swap_imp <--. 0
-                  ; slatch_next_cycle <--. 1
+                  [ slatch_next_cycle <--. 1
                   ; incr_internal_cntr <--. 1
                   ; state.set_next FetchSplittersWait
                   ]
                   [ state.set_next Finished ]
               ] )
-          ; ( FetchSplittersWait
-            , [ slatch_next_cycle <--. 0
-              ; incr_internal_cntr <--. 0
-              ; when_ slatch.ready [ state.set_next ExecLogic ]
-              ] )
+          ; FetchSplittersWait, [ when_ slatch.ready [ state.set_next ExecLogic ] ]
           ; ( ExecLogic
             , [ hit_reg <-- (ppb.output &: slatch.output)
               ; (beams_next
