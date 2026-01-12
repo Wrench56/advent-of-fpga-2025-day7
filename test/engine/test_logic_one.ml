@@ -3,7 +3,7 @@ open Hardcaml
 open Hardcaml_waveterm
 open Solution.Engine.Logic_one
 
-let%expect_test "Part 1 Solver Engine works as expected!" =
+let testbench () =
   let data_width = 16 in
   let data_depth = 17 in
   let mem_fetch_delay = 2 in
@@ -18,7 +18,7 @@ let%expect_test "Part 1 Solver Engine works as expected!" =
   in
   let module Sim = Cyclesim.With_interface (TestLogicOne.I) (TestLogicOne.O) in
   let sim = Sim.create (TestLogicOne.create scope) in
-  let _, sim = Waveform.create sim in
+  let waves, sim = Waveform.create sim in
   let inputs = Cyclesim.inputs sim in
   let outputs = Cyclesim.outputs sim in
   (* Standard example from Advent of Code Day 7 Part 1 *)
@@ -72,6 +72,11 @@ let%expect_test "Part 1 Solver Engine works as expected!" =
     (Bits.to_bool !(outputs.solution_ready))
     (Bits.to_int !(outputs.mem_addr))
     (Bits.to_int !(outputs.solution));
+  waves
+;;
+
+let%expect_test "Part 1 Solver Engine works as expected!" =
+  let _ = testbench () in
   [%expect
     {|
     solution_ready = true; mem_addr = 16; solution = 21
