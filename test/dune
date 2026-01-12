@@ -1,7 +1,15 @@
 (library
  (name test)
- (libraries core hardcaml solution
-   hardcaml_waveterm utils)
+ (modules test)
+ (libraries 
+   core
+   hardcaml
+   solution
+   hardcaml_waveterm
+   utils
+   test_common
+   test_engine
+   test_stencil)
  (preprocess
   (pps ppx_hardcaml ppx_jane))
  (inline_tests))
