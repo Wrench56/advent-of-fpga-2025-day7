@@ -17,9 +17,9 @@ module Testbench = struct
     }
 
   let all =
-    [ { name = "logic_one"
-      ; description = "AoC 2025 Day 7 Part 1 Simulation"
-      ; testbench = Test.Engine.Test_logic_one.testbench
+    [ { name = "beam_engine"
+      ; description = "Beam Engine (AoC 2025 Day 7 Part 1) Simulation"
+      ; testbench = Test.Engine.Test_beam_engine.testbench
       ; config = None
       }
     ; { name = "manifold_engine"
