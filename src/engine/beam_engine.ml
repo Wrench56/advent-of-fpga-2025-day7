@@ -2,11 +2,10 @@ open Base
 open Hardcaml
 open Common
 
-module Make_LogicOne (Config : sig
+module Make_BeamEngine (Config : sig
     val data_width : int
     val data_depth : int
     val max_value : int
-    val mem_fetch_delay : int
   end) =
 struct
   let addr_width = Int.ceil_log2 Config.data_depth
@@ -31,6 +30,7 @@ struct
     type 'a t =
       { clock : 'a
       ; reset : 'a
+      ; mem_ready : 'a
       ; mem_data : 'a [@bits Config.data_width]
       }
     [@@deriving hardcaml]
@@ -38,21 +38,14 @@ struct
 
   module O = struct
     type 'a t =
-      { solution_ready : 'a
+      { next_iter_ready : 'a
+      ; solution_ready : 'a
       ; solution : 'a [@bits count_size]
-      ; mem_addr : 'a [@bits addr_width]
       }
     [@@deriving hardcaml]
   end
 
   let create (scope : Scope.t) (i : Signal.t I.t) : Signal.t O.t =
-    let module SLatch =
-      Slatch.Make_SLatch (struct
-        let data_width = Config.data_width
-        let data_depth = Config.data_depth
-        let mem_fetch_delay = Config.mem_fetch_delay
-      end)
-    in
     let module PopCntr =
       Popcntr.Make_Popcounter (struct
         let data_width = Config.data_width
@@ -91,15 +84,6 @@ struct
         scope
         { clock = i.clock; clear = i.reset; increment = incr_internal_cntr.value }
     in
-    let slatch =
-      SLatch.hierarchical
-        scope
-        { clock = i.clock
-        ; reset = i.reset
-        ; next = slatch_next_cycle.value
-        ; input = i.mem_data
-        }
-    in
     let ppb =
       PPB.hierarchical
         scope
@@ -130,7 +114,6 @@ struct
     in
     let open Always in
     let open Signal in
-    (* TODO: Clean this up using flag registers and remove unneeded states *)
     Always.compile
       [ state.switch
           [ Boot, [ state.set_next FetchBeams ]
@@ -141,8 +124,8 @@ struct
               ] )
           ; ( FetchBeamsWait
             , [ when_
-                  slatch.ready
-                  [ beams_next <-- slatch.output
+                  i.mem_ready
+                  [ beams_next <-- i.mem_data
                   ; swap_imp <--. 1
                   ; state.set_next FetchSplitters
                   ]
@@ -156,12 +139,12 @@ struct
                   ]
                   [ state.set_next Finished ]
               ] )
-          ; FetchSplittersWait, [ when_ slatch.ready [ state.set_next ExecLogic ] ]
+          ; FetchSplittersWait, [ when_ i.mem_ready [ state.set_next ExecLogic ] ]
           ; ( ExecLogic
-            , [ hit_reg <-- (ppb.output &: slatch.output)
+            , [ hit_reg <-- (ppb.output &: i.mem_data)
               ; (beams_next
                  <--
-                 let hit_splitters = ppb.output &: slatch.output in
+                 let hit_splitters = ppb.output &: i.mem_data in
                  let unhit = ppb.output &: ~:hit_splitters in
                  unhit |: sll hit_splitters 1 |: srl hit_splitters 1)
               ; swap_imp <--. 1
@@ -179,7 +162,7 @@ struct
           ; Finished, [ solution_ready <--. 1 ]
           ]
       ];
-    { O.mem_addr = slatch.addr
+    { next_iter_ready = slatch_next_cycle.value
     ; solution_ready = solution_ready.value
     ; solution = accu.sum
     }
@@ -187,6 +170,6 @@ struct
 
   let hierarchical (scope : Scope.t) (input : Signal.t I.t) =
     let module H = Hierarchy.In_scope (I) (O) in
-    H.hierarchical ~scope ~name:"logic_one" create input
+    H.hierarchical ~scope ~name:"beam_engine" create input
   ;;
 end
