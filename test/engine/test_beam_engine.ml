@@ -48,7 +48,7 @@ let testbench () =
       |> List.map ~f:(function
         | 'S' | '^' -> Bits.vdd
         | _ -> Bits.gnd)
-      |> Bits.concat_msb)
+      |> Bits.concat_lsb)
   in
   let memory = bitrows_of_string example_file in
   let cycle n = Utils.cycle sim n in
