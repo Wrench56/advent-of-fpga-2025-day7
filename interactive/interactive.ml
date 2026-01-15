@@ -27,6 +27,12 @@ module Testbench = struct
       ; testbench = Test.Engine.Test_manifold_engine.testbench
       ; config = Some { wave_width = 2; signals_width = 30; values_width = 34 }
       }
+    ; { name = "top"
+      ; description = "Toplevel (AoC 2025 Day 7 Part 1) Simulation"
+      ; testbench = Test.Engine.Test_top.testbench 
+      ; config = Some { wave_width = 2; signals_width = 30; values_width = 34 }
+
+      }
     ]
   ;;
 
