@@ -35,13 +35,11 @@ struct
     let add_ext = uresize i.add reg_size in
     let acc =
       reg_fb spec ~enable:i.enable ~width:reg_size ~f:(fun acc ->
-        let next = acc +: add_ext in
-        (* TODO: Is saturating logic too expensive? *)
+        let wide_next = uresize acc (reg_size + 1) +: uresize add_ext (reg_size + 1) in
+        let maxv_wide = uresize maxv (reg_size + 1) in
         if Config.saturating
-        then (
-          let room = maxv -: add_ext in
-          mux2 (acc >: room) maxv next)
-        else next)
+        then mux2 (wide_next >: maxv_wide) maxv (lsbs wide_next)
+        else lsbs wide_next)
     in
     (* Ready signal is unused for now. Use if latency ever increases *)
     { O.sum = acc; ready = Signal.vdd }
