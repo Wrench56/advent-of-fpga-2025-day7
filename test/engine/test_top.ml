@@ -25,6 +25,8 @@ let testbench () =
       let max_num2 = Int.pow 2 32 - 1
       let mem_fetch_delay = 0
       let mem_write_delay = 0
+      let simd_width = 8
+      let simd_cell_width = 32
 
       (* Standard example from Advent of Code Day 7 *)
       let rom_content =

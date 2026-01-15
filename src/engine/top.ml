@@ -8,13 +8,14 @@ module Make_Top (Config : sig
     val max_num2 : int
     val mem_fetch_delay : int
     val mem_write_delay : int
+    val simd_width : int
+    val simd_cell_width : int
     val rom_content : bool list list option
   end) =
 struct
   let addr_width = Int.ceil_log2 Config.data_depth
   let sol1_width = Int.ceil_log2 Config.max_num1
   let sol2_width = Int.ceil_log2 Config.max_num2
-  let simd_width = 8
   let is_ext_mem = Option.is_none Config.rom_content
 
   module I = struct
@@ -55,8 +56,8 @@ struct
       Manifold_engine.Make_ManifoldEngine (struct
         let data_width = Config.data_width
         let data_depth = Config.data_depth
-        let simd_cell_width = 16
-        let simd_width = simd_width
+        let simd_cell_width = Config.simd_cell_width
+        let simd_width = Config.simd_width
         let max_value = Config.max_num2
         let mem_fetch_delay = Config.mem_fetch_delay + 2
         let mem_write_delay = Config.mem_write_delay + 2
