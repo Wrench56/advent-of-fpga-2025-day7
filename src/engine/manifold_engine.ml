@@ -16,7 +16,7 @@ module Make_ManifoldEngine (Config : sig
     val mem_write_delay : int
   end) =
 struct
-  let count_width = Int.max 1 Config.max_value + 1 |> Int.ceil_log2
+  let count_width = Int.max 1 Config.max_value |> Int.ceil_log2
 
   let iter_per_lane =
     if Config.data_width % Config.simd_width <> 0
@@ -160,7 +160,7 @@ struct
         ; input = ppb_write_d.value
         }
     in
-    let iter = Always.Variable.reg spec ~width:addr_width in
+    let%hw_var iter = Always.Variable.reg spec ~width:addr_width in
     let incr_d = Always.Variable.wire ~default:Signal.gnd in
     let solution_ready_d = Always.Variable.wire ~default:Signal.gnd in
     let row_cntr =
@@ -200,7 +200,6 @@ struct
         let high = ((i + 1) * Config.simd_width) - 1 in
         let low = i * Config.simd_width in
         row.:[high, low])
-      |> Array.rev
     in
     let hit_nw_windows = windows_of_row i.hit_splitters.shl in
     let hit_no_windows = windows_of_row i.hit_splitters.reg in
@@ -230,8 +229,7 @@ struct
                   [ state.set_next SimdExecute ]
               ] )
           ; ( SimdExecute
-            , (* TODO: Try to clean SimdExecute up *)
-              let hit_nw_window = mux iter.value (Array.to_list hit_nw_windows) in
+            , let hit_nw_window = mux iter.value (Array.to_list hit_nw_windows) in
               let hit_no_window = mux iter.value (Array.to_list hit_no_windows) in
               let hit_ne_window = mux iter.value (Array.to_list hit_ne_windows) in
               let west_halo =
@@ -250,7 +248,6 @@ struct
                      else Signal.zero Config.simd_cell_width))
               in
               (List.init Config.simd_width ~f:(fun lane ->
-                 let bit_idx = Config.simd_width - 1 - lane in
                  let stencil_lane = simd_ccurr.(lane) in
                  let high = lane_high_bit lane in
                  let low = lane_low_bit lane in
@@ -258,9 +255,9 @@ struct
                  (* StencilSIMD feeding *)
                  [ simd_hit_range.(lane)
                    <-- Signal.concat_msb
-                         [ hit_nw_window.:[bit_idx, bit_idx]
-                         ; hit_no_window.:[bit_idx, bit_idx]
-                         ; hit_ne_window.:[bit_idx, bit_idx]
+                         [ hit_nw_window.:[lane, lane]
+                         ; hit_no_window.:[lane, lane]
+                         ; hit_ne_window.:[lane, lane]
                          ]
                  ; (stencil_lane.nw
                     <--

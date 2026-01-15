@@ -83,7 +83,7 @@ let testbench () =
     List.hd_exn splitter_lst :: List.tl_exn hit_splitters
   in
   let set_splitters (input : Bits.t ref TestManifoldEngine.I.t) splitters mem_slot =
-    let b2blst lst = Bits.concat_msb (List.map lst ~f:Bits.of_bool) in
+    let b2blst lst = Bits.concat_lsb (List.map lst ~f:Bits.of_bool) in
     let splitters = List.nth_exn splitters mem_slot in
     input.hit_splitters.shl := b2blst (shl_lst splitters);
     input.hit_splitters.reg := b2blst splitters;
