@@ -57,7 +57,7 @@ struct
           ; ne = i.ccurr.(n).ne
           })
     in
-    { cnext = List.map stencils ~f:(fun s -> s.cell) |> List.to_array
+    { cnext = List.map stencils ~f:(fun s -> s.value) |> List.to_array
     ; overflow = List.map stencils ~f:(fun s -> s.overflow) |> List.reduce_exn ~f:( |: )
     ; ready = List.map stencils ~f:(fun s -> s.ready) |> List.reduce_exn ~f:( |: )
     }

@@ -14,15 +14,15 @@ struct
     type 'a t =
       { clock : 'a
       ; reset : 'a
-      ; next : 'a
-      ; input : 'a [@bits Config.data_width]
+      ; step : 'a
+      ; data_in : 'a [@bits Config.data_width]
       }
     [@@deriving hardcaml]
   end
 
   module O = struct
     type 'a t =
-      { output : 'a [@bits Config.data_width]
+      { data_out : 'a [@bits Config.data_width]
       ; addr : 'a [@bits addr_width]
       ; ready : 'a
       }
@@ -39,7 +39,7 @@ struct
     let open Signal in
     let spec = Reg_spec.create ~clock:i.clock ~clear:i.reset () in
     (*
-       [accept] is only true iff a request was sent through [i.next] and we are not [busy].
+       [accept] is only true iff a request was sent through [i.step] and we are not [busy].
        Once we accept a fetch request, we start a [Config.mem_fetch_delay] pulse delay so that the memory
        can set the valid address and fetch the S (as in "Splitter" from the AoC problem) block.
        [rdy_pulse] will signal when this delay has expired.
@@ -49,7 +49,7 @@ struct
     *)
     let busy_d = wire 1 in
     let%hw busy = reg spec ~enable:Signal.vdd busy_d in
-    let%hw accept = i.next &: ~:busy in
+    let%hw accept = i.step &: ~:busy in
     let%hw boot_mode_done =
       reg_fb spec ~enable:Signal.vdd ~width:1 ~f:(fun prev -> prev |: accept)
     in
@@ -65,9 +65,9 @@ struct
         ; increment = accept &: boot_mode_done
         }
     in
-    let latch = reg spec ~enable:rdy_pulse i.input in
+    let latch = reg spec ~enable:rdy_pulse i.data_in in
     let data_rdy = pipeline spec ~enable:Signal.vdd ~n:1 rdy_pulse in
-    { O.output = latch; addr = addrcntr.count; ready = data_rdy }
+    { data_out = latch; addr = addrcntr.count; ready = data_rdy }
   ;;
 
   let hierarchical (scope : Scope.t) (input : Signal.t I.t) =

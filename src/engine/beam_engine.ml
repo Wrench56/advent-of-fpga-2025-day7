@@ -95,7 +95,7 @@ struct
         ; clear = i.reset
         ; enable = Signal.vdd
         ; swap = swap_imp.value
-        ; input = beams_next.value
+        ; data_in = beams_next.value
         }
     in
     let popcntr =
@@ -152,13 +152,13 @@ struct
               ] )
           ; FetchSplittersWait, [ when_ i.mem_ready [ state.set_next ExecLogic ] ]
           ; ( ExecLogic
-            , let hit_splitters = ppb.output &: i.mem_data in
+            , let hit_splitters = ppb.data_out &: i.mem_data in
               [ hit_reg <-- hit_splitters
               ; (beams_next
                  <--
                  let shl_hit_spl = sll hit_splitters 1 in
                  let shr_hit_spl = srl hit_splitters 1 in
-                 let unhit = ppb.output &: ~:hit_splitters in
+                 let unhit = ppb.data_out &: ~:hit_splitters in
                  unhit |: shl_hit_spl |: shr_hit_spl)
               ; hit_splitters_ready_d <--. 1
               ; swap_imp <--. 1

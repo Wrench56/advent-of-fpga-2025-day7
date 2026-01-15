@@ -11,13 +11,13 @@ struct
       ; clear : 'a
       ; enable : 'a
       ; swap : 'a
-      ; input : 'a [@bits Config.data_width]
+      ; data_in : 'a [@bits Config.data_width]
       }
     [@@deriving hardcaml]
   end
 
   module O = struct
-    type 'a t = { output : 'a [@bits Config.data_width] } [@@deriving hardcaml]
+    type 'a t = { data_out : 'a [@bits Config.data_width] } [@@deriving hardcaml]
   end
 
   let create (_scope : Scope.t) (i : Signal.t I.t) : Signal.t O.t =
@@ -28,9 +28,9 @@ struct
       Signal.reg_fb spec ~enable:Signal.vdd ~width:1 ~f:(fun sel ->
         (i.swap &: ~:prev) ^: sel)
     in
-    let ping_buf = Signal.reg spec ~enable:(~:ff_sel &: i.enable) i.input in
-    let pong_buf = Signal.reg spec ~enable:(ff_sel &: i.enable) i.input in
-    { O.output = mux2 ff_sel ping_buf pong_buf }
+    let ping_buf = Signal.reg spec ~enable:(~:ff_sel &: i.enable) i.data_in in
+    let pong_buf = Signal.reg spec ~enable:(ff_sel &: i.enable) i.data_in in
+    { data_out = mux2 ff_sel ping_buf pong_buf }
   ;;
 
   let hierarchical (scope : Scope.t) (input : Signal.t I.t) =

@@ -20,14 +20,14 @@ struct
       ; swap : 'a
       ; read_addr : 'a [@bits addr_width]
       ; write_addr : 'a [@bits addr_width]
-      ; input : 'a [@bits Config.data_width]
+      ; data_in: 'a [@bits Config.data_width]
       }
     [@@deriving hardcaml]
   end
 
   module O = struct
     type 'a t =
-      { output : 'a [@bits Config.data_width]
+      { data_out : 'a [@bits Config.data_width]
       ; write_ready : 'a
       ; read_ready : 'a
       }
@@ -82,10 +82,10 @@ struct
         ; read_addr =
             uresize i.read_addr bank_addr_width
             +: mux2 (ff_sel &: rw_ready) (zero bank_addr_width) half_offset
-        ; write_data = i.input
+        ; write_data = i.data_in
         }
     in
-    { output = backing_mem.read_data; read_ready; write_ready }
+    { data_out = backing_mem.read_data; read_ready; write_ready }
   ;;
 
   let hierarchical (scope : Scope.t) (input : Signal.t I.t) =

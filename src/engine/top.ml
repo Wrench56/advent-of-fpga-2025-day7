@@ -90,8 +90,8 @@ struct
         scope
         { clock = i.clock
         ; reset = i.reset
-        ; next = slatch_next_d
-        ; input =
+        ; step = slatch_next_d
+        ; data_in =
             (if is_ext_mem
              then Option.value ~default:(Signal.zero Config.data_width) i.data
              else
@@ -116,7 +116,7 @@ struct
         { clock = i.clock
         ; reset = i.reset
         ; mem_ready = slatch.ready
-        ; mem_data = slatch.output
+        ; mem_data = slatch.data_out
         }
     in
     let () = beams_rdy_d <== beam_engine.next_iter_ready in
@@ -131,7 +131,7 @@ struct
             (let hit = beam_engine.hit_splitters in
              let x =
                { ManifoldEngine.HitSplitterLane.shl = sll hit 1
-               ; reg = hit
+               ; cen = hit
                ; shr = srl hit 1
                }
              in

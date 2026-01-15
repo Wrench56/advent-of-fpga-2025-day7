@@ -26,33 +26,33 @@ let testbench () =
   for _ = 1 to mem_fetch_delay do
     Queue.enqueue addresses 0
   done;
-  let set_next () = inputs.next := Bits.vdd in
-  let clr_next () = inputs.next := Bits.gnd in
+  let set_step () = inputs.step := Bits.vdd in
+  let clr_step () = inputs.step := Bits.gnd in
   let cycle n =
     for _ = 1 to n do
       let addr = Bits.to_int !(outputs.addr) in
       Queue.enqueue addresses addr;
       let delayed_addr = Queue.dequeue_exn addresses in
-      inputs.input := memory.(delayed_addr) |> Bits.of_int ~width:data_width;
+      inputs.data_in := memory.(delayed_addr) |> Bits.of_int ~width:data_width;
       Utils.cycle sim 1
     done
   in
   let reset () =
     inputs.reset := Bits.vdd;
-    clr_next ();
+    clr_step ();
     cycle 1;
     inputs.reset := Bits.gnd
   in
   reset ();
-  set_next ();
+  set_step ();
   cycle 1;
-  clr_next ();
+  clr_step ();
   cycle 1;
-  set_next ();
+  set_step ();
   cycle 1;
-  clr_next ();
+  clr_step ();
   cycle 2;
-  set_next ();
+  set_step ();
   cycle 10;
   waves
 ;;
@@ -68,15 +68,15 @@ let%expect_test "[S]plitter Latch works as expected" =
 │reset             ││                                                                                                │
 │                  ││────────────────────────────────────────────────────────────────────────────────────────────────│
 │                  ││──────────────────────────────────────────────────────┬───────────────────────┬─────────────────│
-│input             ││ 00                                                   │20                     │40               │
+│data_in           ││ 00                                                   │20                     │40               │
 │                  ││──────────────────────────────────────────────────────┴───────────────────────┴─────────────────│
-│next              ││      ┌─────┐     ┌─────┐           ┌───────────────────────────────────────────────────────────│
+│step              ││      ┌─────┐     ┌─────┐           ┌───────────────────────────────────────────────────────────│
 │                  ││──────┘     └─────┘     └───────────┘                                                           │
 │                  ││──────────────────────────────────────────┬───────────────────────┬───────────────────────┬─────│
 │addr              ││ 0                                        │1                      │2                      │3    │
 │                  ││──────────────────────────────────────────┴───────────────────────┴───────────────────────┴─────│
 │                  ││────────────────────────────────────────────────────────────┬───────────────────────┬───────────│
-│output            ││ 00                                                         │20                     │40         │
+│data_out          ││ 00                                                         │20                     │40         │
 │                  ││────────────────────────────────────────────────────────────┴───────────────────────┴───────────│
 │ready             ││                              ┌─────┐                       ┌─────┐                 ┌─────┐     │
 │                  ││──────────────────────────────┘     └───────────────────────┘     └─────────────────┘     └─────│

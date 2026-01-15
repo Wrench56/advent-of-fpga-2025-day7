@@ -26,10 +26,10 @@ let testbench () =
   let cycle n = Utils.cycle sim n in
   let set_buffer_at addr value =
     inputs.write_addr := Bits.of_int ~width:addr_width addr;
-    inputs.input := Bits.of_int ~width:data_width value
+    inputs.data_in := Bits.of_int ~width:data_width value
   in
   let read_buffer_at addr = inputs.read_addr := Bits.of_int ~width:addr_width addr in
-  let set_zero () = inputs.input := Bits.of_int ~width:data_width 0 in
+  let set_zero () = inputs.data_in := Bits.of_int ~width:data_width 0 in
   let write_req state = inputs.write_req := Bits.of_bool state in
   let read_req state = inputs.read_req := Bits.of_bool state in
   let clear () =
@@ -90,7 +90,7 @@ let%expect_test "Test RAM-based PingPongBuffer" =
           ]
           ~wave_format:Wave_format.Bit
       ; Display_rule.port_name_is_one_of
-          [ "input"; "output" ]
+          [ "data_in"; "data_out" ]
           ~wave_format:Wave_format.Hex
       ; Display_rule.port_name_matches (Re.Posix.compile (Re.Posix.re ".*"))
       ]
@@ -113,10 +113,10 @@ let%expect_test "Test RAM-based PingPongBuffer" =
 │write_ready       ││──────────────────┐           ┌───────────────────────────────────┐           ┌─────────────────────────────│
 │                  ││                  └───────────┘                                   └───────────┘                             │
 │                  ││──────┬─────────────────────────────────────────────────────┬───────────────────────────────────────────────│
-│input             ││ 0000 │DEAD                                                 │BEEF                                           │
+│data_in           ││ 0000 │DEAD                                                 │BEEF                                           │
 │                  ││──────┴─────────────────────────────────────────────────────┴───────────────────────────────────────────────│
 │                  ││──────────────────────────────────────────┬───────────────────────────────────────────────┬─────────────────│
-│output            ││ 0000                                     │DEAD                                           │BEEF             │
+│data_out          ││ 0000                                     │DEAD                                           │BEEF             │
 │                  ││──────────────────────────────────────────┴───────────────────────────────────────────────┴─────────────────│
 │                  ││────────────────────────────────────────────────────────────────────────────────────┬───────────────────────│
 │read_addr         ││ 000                                                                                │001                    │

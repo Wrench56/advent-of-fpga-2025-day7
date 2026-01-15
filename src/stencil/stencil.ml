@@ -23,7 +23,7 @@ struct
 
   module O = struct
     type 'a t =
-      { cell : 'a [@bits Config.data_width]
+      { value : 'a [@bits Config.data_width]
       ; overflow : 'a
       ; ready : 'a
       }
@@ -53,7 +53,7 @@ struct
         }
     in
     let open Signal in
-    { cell = mux2 i.boot (uresize i.hit_range.:[1, 1] Config.data_width) adder.sum
+    { value = mux2 i.boot (uresize i.hit_range.:[1, 1] Config.data_width) adder.sum
     ; overflow =
         mux2 (adder.carry >: zero (Signal.width adder.carry)) Signal.vdd Signal.gnd
     ; ready = mux2 i.boot Signal.vdd adder.ready

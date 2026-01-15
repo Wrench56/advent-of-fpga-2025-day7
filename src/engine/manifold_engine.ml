@@ -29,7 +29,7 @@ struct
   module HitSplitterLane = struct
     type 'a t =
       { shl : 'a [@bits Config.data_width]
-      ; reg : 'a [@bits Config.data_width]
+      ; cen: 'a [@bits Config.data_width]
       ; shr : 'a [@bits Config.data_width]
       }
     [@@deriving sexp_of, hardcaml]
@@ -157,7 +157,7 @@ struct
         ; read_req = read_req_d.value
         ; read_addr = read_addr.value
         ; write_addr = write_addr.value
-        ; input = ppb_write_d.value
+        ; data_in = ppb_write_d.value
         }
     in
     let%hw_var iter = Always.Variable.reg spec ~width:addr_width in
@@ -180,7 +180,7 @@ struct
         ; nums =
             (let open Signal in
              Array.init Config.simd_width ~f:(fun lane ->
-               uresize ppb.output.:[lane_high_bit lane, lane_low_bit lane] count_width))
+               uresize ppb.data_out.:[lane_high_bit lane, lane_low_bit lane] count_width))
         }
     in
     let accu_en_d = Always.Variable.wire ~default:Signal.gnd in
@@ -202,7 +202,7 @@ struct
         row.:[high, low])
     in
     let hit_nw_windows = windows_of_row i.hit_splitters.shl in
-    let hit_no_windows = windows_of_row i.hit_splitters.reg in
+    let hit_no_windows = windows_of_row i.hit_splitters.cen in
     let hit_ne_windows = windows_of_row i.hit_splitters.shr in
     let west_halos =
       Array.init iter_per_lane ~f:(fun _ ->
@@ -249,7 +249,7 @@ struct
                  let stencil_lane = simd_ccurr.(lane) in
                  let high = lane_high_bit lane in
                  let low = lane_low_bit lane in
-                 let center = ppb.output.:[high, low] in
+                 let center = ppb.data_out.:[high, low] in
                  (* StencilSIMD feeding *)
                  [ simd_hit_range.(lane)
                    <-- Signal.concat_msb
@@ -261,13 +261,13 @@ struct
                     <--
                     if lane = 0
                     then west_halo
-                    else ppb.output.:[lane_high_bit (lane - 1), lane_low_bit (lane - 1)])
+                    else ppb.data_out.:[lane_high_bit (lane - 1), lane_low_bit (lane - 1)])
                  ; stencil_lane.no <-- center
                  ; (stencil_lane.ne
                     <--
                     if lane = Config.simd_width - 1
                     then east_halo
-                    else ppb.output.:[lane_high_bit (lane + 1), lane_low_bit (lane + 1)])
+                    else ppb.data_out.:[lane_high_bit (lane + 1), lane_low_bit (lane + 1)])
                  ]
                  (* Save halos *)
                  @ (if lane = Config.simd_width - 1

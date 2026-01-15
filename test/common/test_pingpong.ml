@@ -19,9 +19,9 @@ let testbench () =
   let _outputs = Cyclesim.outputs sim in
   let cycle n = Utils.cycle sim n in
   let set_buffer value =
-    inputs.input := Utils.bits_of_string_be ~width:data_width value
+    inputs.data_in := Utils.bits_of_string_be ~width:data_width value
   in
-  let set_zero () = inputs.input := Bits.of_int ~width:data_width 0 in
+  let set_zero () = inputs.data_in:= Bits.of_int ~width:data_width 0 in
   let enable () = inputs.enable := Bits.vdd in
   let disable () = inputs.enable := Bits.gnd in
   let clear () =
@@ -53,7 +53,7 @@ let testbench () =
   waves
 ;;
 
-let%expect_test "todo" =
+let%expect_test "Ping Pong Buffer works as expected!" =
   let waves = testbench () in
   Waveform.print ~wave_width:2 ~display_width:100 waves;
   [%expect
@@ -66,12 +66,12 @@ let%expect_test "todo" =
 │enable            ││      ┌───────────────────────────────────────────────────────────────────────│
 │                  ││──────┘                                                                       │
 │                  ││──────┬─────────────────┬─────────────────────────────┬───────────────────────│
-│input             ││ 0000.│44454144         │42454546                     │00000000               │
+│data_in           ││ 0000.│44454144         │42454546                     │00000000               │
 │                  ││──────┴─────────────────┴─────────────────────────────┴───────────────────────│
 │swap              ││      ┌─────┐                       ┌─────┐                       ┌─────┐     │
 │                  ││──────┘     └───────────────────────┘     └───────────────────────┘     └─────│
 │                  ││────────────┬─────────────────────────────┬─────────────────┬─────────────────│
-│output            ││ 00000000   │44454144                     │42454546         │00000000         │
+│data_out          ││ 00000000   │44454144                     │42454546         │00000000         │
 │                  ││────────────┴─────────────────────────────┴─────────────────┴─────────────────│
 │                  ││                                                                              │
 │                  ││                                                                              │

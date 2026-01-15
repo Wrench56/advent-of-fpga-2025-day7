@@ -86,7 +86,7 @@ let testbench () =
     let b2blst lst = Bits.concat_lsb (List.map lst ~f:Bits.of_bool) in
     let splitters = List.nth_exn splitters mem_slot in
     input.hit_splitters.shl := b2blst (shl_lst splitters);
-    input.hit_splitters.reg := b2blst splitters;
+    input.hit_splitters.cen := b2blst splitters;
     input.hit_splitters.shr := b2blst (shr_lst splitters)
   in
   let cycle n = Utils.cycle sim n in
