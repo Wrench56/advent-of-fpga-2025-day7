@@ -27,6 +27,7 @@ rules:
       - stencil
       - engine
       - interactive
+      - utils
   subject-empty:
     level: error
   type:
