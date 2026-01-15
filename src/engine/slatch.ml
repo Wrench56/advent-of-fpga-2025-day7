@@ -47,13 +47,13 @@ struct
        (the latter is needed for initial set of the busy flag) AND we have not received a [rdy_pulse]
        (this is needed to reset the busy flag)
     *)
-    let busy_d = wire 1 in
+    let%hw busy_d = wire 1 in
     let%hw busy = reg spec ~enable:Signal.vdd busy_d in
     let%hw accept = i.step &: ~:busy in
     let%hw boot_mode_done =
       reg_fb spec ~enable:Signal.vdd ~width:1 ~f:(fun prev -> prev |: accept)
     in
-    let rdy_pulse =
+    let%hw rdy_pulse =
       pipeline spec ~enable:Signal.vdd ~n:(Config.mem_fetch_delay + 1) accept
     in
     Signal.assign busy_d (busy |: accept &: ~:rdy_pulse);
@@ -65,8 +65,8 @@ struct
         ; increment = accept &: boot_mode_done
         }
     in
-    let latch = reg spec ~enable:rdy_pulse i.data_in in
-    let data_rdy = pipeline spec ~enable:Signal.vdd ~n:1 rdy_pulse in
+    let%hw latch = reg spec ~enable:rdy_pulse i.data_in in
+    let%hw data_rdy = pipeline spec ~enable:Signal.vdd ~n:1 rdy_pulse in
     { data_out = latch; addr = addrcntr.count; ready = data_rdy }
   ;;
 

@@ -73,15 +73,17 @@ struct
     in
     let spec = Reg_spec.create ~clock:i.clock ~clear:i.reset () in
     let%hw_var slatch_next_cycle = Always.Variable.wire ~default:Signal.gnd in
-    let incr_internal_cntr = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var incr_internal_cntr = Always.Variable.wire ~default:Signal.gnd in
     let%hw_var automata_finished = Always.Variable.wire ~default:Signal.gnd in
-    let solution_ready = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var solution_ready = Always.Variable.wire ~default:Signal.gnd in
     let%hw_var swap_imp = Always.Variable.wire ~default:Signal.gnd in
     let%hw_var popcount_finished = Always.Variable.wire ~default:Signal.gnd in
-    let hit_reg = Always.Variable.reg ~width:Config.data_width spec in
-    let boot_mode_done = Always.Variable.reg ~width:1 spec in
-    let beams_next = Always.Variable.wire ~default:(Signal.zero Config.data_width) in
-    let hit_splitters_ready_d = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var hit_reg = Always.Variable.reg ~width:Config.data_width spec in
+    let%hw_var boot_mode_done = Always.Variable.reg ~width:1 spec in
+    let%hw_var beams_next =
+      Always.Variable.wire ~default:(Signal.zero Config.data_width)
+    in
+    let%hw_var hit_splitters_ready_d = Always.Variable.wire ~default:Signal.gnd in
     let state = Always.State_machine.create (module LogicState) spec in
     let internal_cntr =
       Cntr.hierarchical

@@ -29,7 +29,7 @@ struct
   module HitSplitterLane = struct
     type 'a t =
       { shl : 'a [@bits Config.data_width]
-      ; cen: 'a [@bits Config.data_width]
+      ; cen : 'a [@bits Config.data_width]
       ; shr : 'a [@bits Config.data_width]
       }
     [@@deriving sexp_of, hardcaml]
@@ -109,7 +109,7 @@ struct
     in
     let spec = Reg_spec.create ~clock:i.clock ~clear:i.reset () in
     let state = Always.State_machine.create (module LogicState) spec in
-    let boot_d = Always.Variable.reg spec ~width:1 in
+    let%hw_var boot_d = Always.Variable.reg spec ~width:1 in
     let simd_ccurr =
       Array.init Config.simd_width ~f:(fun _ ->
         { StencilSIMD.StencilLane.nw =
@@ -137,11 +137,11 @@ struct
         ; hit_range = Array.map simd_hit_range ~f:(fun hit_range -> hit_range.value)
         }
     in
-    let write_req_d = Always.Variable.wire ~default:Signal.gnd in
-    let read_req_d = Always.Variable.wire ~default:Signal.gnd in
-    let swap_d = Always.Variable.wire ~default:Signal.gnd in
-    let next_iter_ready_d = Always.Variable.wire ~default:Signal.gnd in
-    let ppb_write_d =
+    let%hw_var write_req_d = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var read_req_d = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var swap_d = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var next_iter_ready_d = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var ppb_write_d =
       Always.Variable.wire
         ~default:(Signal.zero (Config.simd_cell_width * Config.simd_width))
     in
@@ -161,8 +161,8 @@ struct
         }
     in
     let%hw_var iter = Always.Variable.reg spec ~width:addr_width in
-    let incr_d = Always.Variable.wire ~default:Signal.gnd in
-    let solution_ready_d = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var incr_d = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var solution_ready_d = Always.Variable.wire ~default:Signal.gnd in
     let row_cntr =
       RowCounter.hierarchical
         scope
@@ -170,7 +170,7 @@ struct
     in
     let lane_high_bit lane = ((Config.simd_width - lane) * Config.simd_cell_width) - 1 in
     let lane_low_bit lane = lane_high_bit lane - Config.simd_cell_width + 1 in
-    let adder_en_d = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var adder_en_d = Always.Variable.wire ~default:Signal.gnd in
     let adder_simd =
       AdderSIMD.hierarchical
         scope
@@ -183,7 +183,7 @@ struct
                uresize ppb.data_out.:[lane_high_bit lane, lane_low_bit lane] count_width))
         }
     in
-    let accu_en_d = Always.Variable.wire ~default:Signal.gnd in
+    let%hw_var accu_en_d = Always.Variable.wire ~default:Signal.gnd in
     let sol_accu =
       SolutionAccumulator.hierarchical
         scope
@@ -212,7 +212,7 @@ struct
       Array.init iter_per_lane ~f:(fun _ ->
         Always.Variable.reg spec ~width:Config.simd_cell_width)
     in
-    let overflow_reg = Always.Variable.reg spec ~width:1 in
+    let%hw_var overflow_reg = Always.Variable.reg spec ~width:1 in
     compile
       [ state.switch
           [ ( Boot
@@ -261,13 +261,15 @@ struct
                     <--
                     if lane = 0
                     then west_halo
-                    else ppb.data_out.:[lane_high_bit (lane - 1), lane_low_bit (lane - 1)])
+                    else ppb.data_out.:[lane_high_bit (lane - 1), lane_low_bit (lane - 1)]
+                   )
                  ; stencil_lane.no <-- center
                  ; (stencil_lane.ne
                     <--
                     if lane = Config.simd_width - 1
                     then east_halo
-                    else ppb.data_out.:[lane_high_bit (lane + 1), lane_low_bit (lane + 1)])
+                    else ppb.data_out.:[lane_high_bit (lane + 1), lane_low_bit (lane + 1)]
+                   )
                  ]
                  (* Save halos *)
                  @ (if lane = Config.simd_width - 1
