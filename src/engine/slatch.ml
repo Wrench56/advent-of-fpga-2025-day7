@@ -38,7 +38,6 @@ struct
     in
     let open Signal in
     let spec = Reg_spec.create ~clock:i.clock ~clear:i.reset () in
-    (* TODO: Maybe replace this ready flag system with a proper edge detector *)
     (*
        [accept] is only true iff a request was sent through [i.next] and we are not [busy].
        Once we accept a fetch request, we start a [Config.mem_fetch_delay] pulse delay so that the memory
@@ -48,11 +47,12 @@ struct
        (the latter is needed for initial set of the busy flag) AND we have not received a [rdy_pulse]
        (this is needed to reset the busy flag)
     *)
-    (* Forced to create a wire so that I can reference it from [accept] *)
     let busy_d = wire 1 in
-    (* TODO: There must be a more idiomatic way to do this with feedback registers... *)
-    let busy = reg spec ~enable:Signal.vdd busy_d in
-    let accept = i.next &: ~:busy in
+    let%hw busy = reg spec ~enable:Signal.vdd busy_d in
+    let%hw accept = i.next &: ~:busy in
+    let%hw boot_mode_done =
+      reg_fb spec ~enable:Signal.vdd ~width:1 ~f:(fun prev -> prev |: accept)
+    in
     let rdy_pulse =
       pipeline spec ~enable:Signal.vdd ~n:(Config.mem_fetch_delay + 1) accept
     in
@@ -60,10 +60,13 @@ struct
     let addrcntr =
       AddrCntr.hierarchical
         scope
-        { AddrCntr.I.clock = i.clock; clear = i.reset; increment = accept }
+        { AddrCntr.I.clock = i.clock
+        ; clear = i.reset
+        ; increment = accept &: boot_mode_done
+        }
     in
     let latch = reg spec ~enable:rdy_pulse i.input in
-    let data_rdy = pipeline spec ~enable: Signal.vdd ~n:1 rdy_pulse in
+    let data_rdy = pipeline spec ~enable:Signal.vdd ~n:1 rdy_pulse in
     { O.output = latch; addr = addrcntr.count; ready = data_rdy }
   ;;
 
