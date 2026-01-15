@@ -28,6 +28,7 @@ rules:
       - engine
       - interactive
       - utils
+      - gen
   subject-empty:
     level: error
   type:
