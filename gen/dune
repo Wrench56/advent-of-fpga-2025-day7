@@ -1,0 +1,12 @@
+(executable
+  (name generate)
+  (modules generate)
+  (libraries 
+    hardcaml
+    stdlib
+    core_unix.command_unix
+    solution
+    utils)
+  (preprocess
+    (pps ppx_jane))
+  )
