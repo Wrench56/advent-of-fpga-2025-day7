@@ -16,7 +16,7 @@ module Make_ManifoldEngine (Config : sig
     val mem_write_delay : int
   end) =
 struct
-  let count_width = Int.max 1 Config.max_value |> Int.ceil_log2
+  let count_width = Int.max 1 Config.max_value + 1 |> Int.ceil_log2
 
   let iter_per_lane =
     if Config.data_width % Config.simd_width <> 0
@@ -224,10 +224,8 @@ struct
               ] )
           ; SimdWaitRead, [ read_req_d <--. 1; state.set_next SimdWaitData ]
           ; ( SimdWaitData
-            , [ when_
-                  (ppb.read_ready &: ppb.write_ready &: i.sim_ready)
-                  [ state.set_next SimdExecute ]
-              ] )
+            , [ when_ (ppb.read_ready &: ppb.write_ready) [ state.set_next SimdExecute ] ]
+            )
           ; ( SimdExecute
             , let hit_nw_window = mux iter.value (Array.to_list hit_nw_windows) in
               let hit_no_window = mux iter.value (Array.to_list hit_no_windows) in
