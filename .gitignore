@@ -6,3 +6,7 @@ tools/commitlint*
 
 # Ignore direnv directory
 .direnv/
+
+# Ignore generated RTL
+*.v
+*.vhd
