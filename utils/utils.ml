@@ -17,3 +17,31 @@ let cycle sim n =
     Cyclesim.cycle sim
   done
 ;;
+
+type grid =
+  { width : int
+  ; height : int
+  ; rows : string array
+  }
+
+let load_grid (path : string) : grid =
+  let lines = In_channel.with_open_text path In_channel.input_lines in
+  match lines with
+  | [] -> failwith "Gridfile is empty!"
+  | first :: rest ->
+    let width = String.length first in
+    if width = 0 then failwith "Gridfile's first line is empty!";
+    List.iteri (first :: rest) ~f:(fun idx line ->
+      let w = String.length line in
+      if w <> width
+      then
+        failwith
+          (Printf.sprintf
+             "Gridfile has inconsistent line width at line %d: got %d expected %d"
+             (idx + 1)
+             w
+             width));
+    let rows = Array.of_list (first :: rest) in
+    let height = Array.length rows in
+    { width; height; rows }
+;;
