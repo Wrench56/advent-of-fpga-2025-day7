@@ -39,6 +39,8 @@ struct
   module O = struct
     type 'a t =
       { next_iter_ready : 'a
+      ; hit_splitters_ready : 'a
+      ; hit_splitters : 'a [@bits Config.data_width]
       ; solution_ready : 'a
       ; solution : 'a [@bits count_size]
       }
@@ -77,7 +79,9 @@ struct
     let%hw_var swap_imp = Always.Variable.wire ~default:Signal.gnd in
     let%hw_var popcount_finished = Always.Variable.wire ~default:Signal.gnd in
     let hit_reg = Always.Variable.reg ~width:Config.data_width spec in
+    let boot_mode_done = Always.Variable.reg ~width:1 spec in
     let beams_next = Always.Variable.wire ~default:(Signal.zero Config.data_width) in
+    let hit_splitters_ready_d = Always.Variable.wire ~default:Signal.gnd in
     let state = Always.State_machine.create (module LogicState) spec in
     let internal_cntr =
       Cntr.hierarchical
@@ -126,6 +130,13 @@ struct
             , [ when_
                   i.mem_ready
                   [ beams_next <-- i.mem_data
+                  ; if_
+                      ~:(boot_mode_done.value)
+                      [ hit_reg <-- i.mem_data
+                      ; hit_splitters_ready_d <--. 1
+                      ; boot_mode_done <--. 1
+                      ]
+                      []
                   ; swap_imp <--. 1
                   ; state.set_next FetchSplitters
                   ]
@@ -141,12 +152,15 @@ struct
               ] )
           ; FetchSplittersWait, [ when_ i.mem_ready [ state.set_next ExecLogic ] ]
           ; ( ExecLogic
-            , [ hit_reg <-- (ppb.output &: i.mem_data)
+            , let hit_splitters = ppb.output &: i.mem_data in
+              [ hit_reg <-- hit_splitters
               ; (beams_next
                  <--
-                 let hit_splitters = ppb.output &: i.mem_data in
+                 let shl_hit_spl = sll hit_splitters 1 in
+                 let shr_hit_spl = srl hit_splitters 1 in
                  let unhit = ppb.output &: ~:hit_splitters in
-                 unhit |: sll hit_splitters 1 |: srl hit_splitters 1)
+                 unhit |: shl_hit_spl |: shr_hit_spl)
+              ; hit_splitters_ready_d <--. 1
               ; swap_imp <--. 1
               ; state.set_next Popcount
               ] )
@@ -163,6 +177,8 @@ struct
           ]
       ];
     { next_iter_ready = slatch_next_cycle.value
+    ; hit_splitters_ready = Signal.pipeline ~n:1 spec hit_splitters_ready_d.value
+    ; hit_splitters = hit_reg.value
     ; solution_ready = solution_ready.value
     ; solution = accu.sum
     }
