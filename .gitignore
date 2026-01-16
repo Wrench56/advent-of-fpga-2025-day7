@@ -10,3 +10,6 @@ tools/commitlint*
 # Ignore generated RTL
 *.v
 *.vhd
+
+# Ignore verification and bitstream artifacts
+artifacts/
