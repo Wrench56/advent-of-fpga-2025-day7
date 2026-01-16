@@ -29,6 +29,7 @@ rules:
       - interactive
       - utils
       - gen
+      - assets
   subject-empty:
     level: error
   type:
