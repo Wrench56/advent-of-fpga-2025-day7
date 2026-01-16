@@ -24,7 +24,7 @@ struct
     else Config.data_width / Config.simd_width
   ;;
 
-  let addr_width = Int.ceil_log2 iter_per_lane
+  let addr_width = Int.ceil_log2 iter_per_lane |> Int.max 1
 
   module HitSplitterLane = struct
     type 'a t =
