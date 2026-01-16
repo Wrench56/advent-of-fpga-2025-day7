@@ -109,7 +109,9 @@ Now that we know how to advance our automaton, we can concentrate on the actual 
 
 Well, notice that we already have an array that essentially encodes this information: `hit`. Every set bit in `hit` represents a split "event". So the total splits that happened are the sum of all these set bits throughout all rows. This is just the sum of popcounts, or formally:
 
-$$ \text{total\_splits} = \sum_{r=0}^{\text{data\_depth}-2} \mathrm{popcount}\bigl(\text{hit}[r]\bigr) $$
+```math
+\text{total\_splits} = \sum_{r=0}^{\text{data\_depth}-2} \mathrm{popcount}\!\bigl(\text{hit}[r]\bigr)
+```
 
 Once again, this operation is very hardware friendly.
 
@@ -126,7 +128,9 @@ The question we have to solve for is:
 
 This can be answered fairly easily by summing the last row's (`R`) timelines:
 
-$$ \text{total\_timelines} = \sum_{c=0}^{\text{data\_width}} \bigl(\text{timelines}[R][c]\bigr) $$
+```math
+\text{total\_timelines} = \sum_{c=0}^{\text{data\_width}} \text{timelines}[R][c]
+```
 
 ## Hardware Implementation
 
