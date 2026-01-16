@@ -59,8 +59,8 @@ struct
         let simd_cell_width = Config.simd_cell_width
         let simd_width = Config.simd_width
         let max_value = Config.max_num2
-        let mem_fetch_delay = Config.mem_fetch_delay + 2
-        let mem_write_delay = Config.mem_write_delay + 2
+        let mem_fetch_delay = Config.mem_fetch_delay
+        let mem_write_delay = Config.mem_write_delay
       end)
     in
     let spec = Reg_spec.create ~clock:i.clock ~clear:i.reset () in
