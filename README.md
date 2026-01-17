@@ -1,5 +1,8 @@
 # Jane Street's Advent of FPGA 2025 Day 7 in Hardcaml
 
+> [!IMPORTANT]
+> Last allowed commit before competition deadline (Jan 16th 2026 11:59pm (UTC-5)): [80c1dd8](https://github.com/Wrench56/advent-of-fpga-2025-day7/commit/80c1dd845d1719bcdd3b72aa3ba3117230c285d9)
+
 ### Prolog: Learning OCaml and Hardcaml
 
 This repository contains my solutions written in Hardcaml for AoC Day 7 (Laboratories).
