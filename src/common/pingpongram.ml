@@ -8,7 +8,7 @@ module Make_PingPongRAM (Config : sig
     val mem_write_delay : int
   end) =
 struct
-  let addr_width = Int.ceil_log2 Config.data_depth
+  let addr_width = Int.ceil_log2 Config.data_depth |> Int.max 1
   let bank_addr_width = Config.data_depth * 2 |> Int.ceil_log2
 
   module I = struct
@@ -63,7 +63,7 @@ struct
     in
     read_busy_d <== (read_busy |: read_accept &: ~:read_done_pulse);
     let read_ready = ~:read_busy in
-    let rw_ready = read_ready &: write_ready in
+    let%hw rw_ready = read_ready &: write_ready in
     let ff_sel =
       Signal.reg_fb spec ~enable:Signal.vdd ~width:1 ~f:(fun sel ->
         let toggle = i.swap &: ~:prev &: rw_ready in
@@ -78,10 +78,10 @@ struct
         ; read_enable = read_accept
         ; write_addr =
             uresize i.write_addr bank_addr_width
-            +: mux2 (ff_sel &: rw_ready) half_offset (zero bank_addr_width)
+            +: mux2 (ff_sel) half_offset (zero bank_addr_width)
         ; read_addr =
             uresize i.read_addr bank_addr_width
-            +: mux2 (ff_sel &: rw_ready) (zero bank_addr_width) half_offset
+            +: mux2 (ff_sel) (zero bank_addr_width) half_offset
         ; write_data = i.data_in
         }
     in
