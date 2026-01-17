@@ -41,7 +41,6 @@ struct
       | SimdWaitRead
       | SimdWaitData
       | SimdExecute
-      | SimdWaitSimd
       | SimdWaitWrite
       | SimdFinished
       | AdderRead
@@ -104,7 +103,7 @@ struct
       Make_Accumulator (struct
         let max_value = Config.max_value
         let add_width = count_width
-        let saturating = true
+        let saturating = false
       end)
     in
     let spec = Reg_spec.create ~clock:i.clock ~clear:i.reset () in
@@ -113,13 +112,15 @@ struct
     let simd_ccurr =
       Array.init Config.simd_width ~f:(fun _ ->
         { StencilSIMD.StencilLane.nw =
-            Always.Variable.reg spec ~width:Config.simd_cell_width
-        ; no = Always.Variable.reg spec ~width:Config.simd_cell_width
-        ; ne = Always.Variable.reg spec ~width:Config.simd_cell_width
+            Always.Variable.wire ~default:(Signal.zero Config.simd_cell_width)
+        ; no = Always.Variable.wire ~default:(Signal.zero Config.simd_cell_width)
+        ; ne = Always.Variable.wire ~default:(Signal.zero Config.simd_cell_width)
         })
     in
-    let simd_hit_range =
-      Array.init Config.simd_width ~f:(fun _ -> Always.Variable.reg spec ~width:3)
+    let hit_range =
+      Array.init Config.simd_width ~f:(fun _ ->
+        let%hw_var w = Always.Variable.wire ~default:(Signal.zero 3) in
+        w)
     in
     let simd =
       StencilSIMD.hierarchical
@@ -134,7 +135,7 @@ struct
               ; no = lane.no.value
               ; ne = lane.ne.value
               })
-        ; hit_range = Array.map simd_hit_range ~f:(fun hit_range -> hit_range.value)
+        ; hit_range = Array.map hit_range ~f:(fun hit_range -> hit_range.value)
         }
     in
     let%hw_var write_req_d = Always.Variable.wire ~default:Signal.gnd in
@@ -204,149 +205,245 @@ struct
     let hit_nw_windows = windows_of_row i.hit_splitters.shl in
     let hit_no_windows = windows_of_row i.hit_splitters.cen in
     let hit_ne_windows = windows_of_row i.hit_splitters.shr in
-    let west_halos =
-      Array.init iter_per_lane ~f:(fun _ ->
-        Always.Variable.reg spec ~width:Config.simd_cell_width)
-    in
-    let east_halos =
-      Array.init iter_per_lane ~f:(fun _ ->
-        Always.Variable.reg spec ~width:Config.simd_cell_width)
-    in
     let%hw_var overflow_reg = Always.Variable.reg spec ~width:1 in
-    compile
-      [ state.switch
-          [ ( Boot
-            , [ (* Fetch the initial sources using Stencil boot mode *)
-                iter <--. 0
-              ; overflow_reg <--. 0
-              ; boot_d <--. 1
-              ; when_ i.sim_ready [ state.set_next SimdWaitData ]
-              ] )
-          ; SimdWaitRead, [ read_req_d <--. 1; state.set_next SimdWaitData ]
-          ; ( SimdWaitData
-            , [ when_ (ppb.read_ready &: ppb.write_ready) [ state.set_next SimdExecute ] ]
-            )
-          ; ( SimdExecute
-            , let hit_nw_window = mux iter.value (Array.to_list hit_nw_windows) in
-              let hit_no_window = mux iter.value (Array.to_list hit_no_windows) in
-              let hit_ne_window = mux iter.value (Array.to_list hit_ne_windows) in
-              let west_halo =
-                mux
-                  iter.value
-                  (Signal.zero Config.simd_cell_width
-                   :: List.init (iter_per_lane - 1) ~f:(fun chunk ->
-                     west_halos.(chunk).value))
-              in
-              let east_halo =
-                mux
-                  iter.value
-                  (List.init iter_per_lane ~f:(fun chunk ->
-                     if chunk < iter_per_lane - 1
-                     then east_halos.(chunk).value
-                     else Signal.zero Config.simd_cell_width))
-              in
-              (List.init Config.simd_width ~f:(fun lane ->
-                 let stencil_lane = simd_ccurr.(lane) in
-                 let high = lane_high_bit lane in
-                 let low = lane_low_bit lane in
-                 let center = ppb.data_out.:[high, low] in
-                 (* StencilSIMD feeding *)
-                 [ simd_hit_range.(lane)
-                   <-- Signal.concat_msb
-                         [ hit_nw_window.:[lane, lane]
-                         ; hit_no_window.:[lane, lane]
-                         ; hit_ne_window.:[lane, lane]
-                         ]
-                 ; (stencil_lane.nw
-                    <--
-                    if lane = 0
-                    then west_halo
-                    else ppb.data_out.:[lane_high_bit (lane - 1), lane_low_bit (lane - 1)]
-                   )
-                 ; stencil_lane.no <-- center
-                 ; (stencil_lane.ne
-                    <--
-                    if lane = Config.simd_width - 1
-                    then east_halo
-                    else ppb.data_out.:[lane_high_bit (lane + 1), lane_low_bit (lane + 1)]
-                   )
-                 ]
-                 (* Save halos *)
-                 @ (if lane = Config.simd_width - 1
-                    then
-                      List.init iter_per_lane ~f:(fun chunk ->
-                        when_ (iter.value ==:. chunk) [ west_halos.(chunk) <-- center ])
-                    else [])
-                 @
-                 if lane = 0
-                 then
-                   List.init (iter_per_lane - 1) ~f:(fun chunk ->
-                     when_ (iter.value ==:. chunk + 1) [ east_halos.(chunk) <-- center ])
-                 else [])
-               |> List.concat)
-              @ [ state.set_next SimdWaitSimd ] )
-          ; ( SimdWaitSimd
-            , [ when_
-                  simd.ready
-                  [ ppb_write_d <-- (Array.to_list simd.cnext |> Signal.concat_msb)
-                  ; write_req_d <--. 1
-                  ; when_ (simd.overflow <>:. 0) [ overflow_reg <--. 1 ]
-                  ; state.set_next SimdWaitWrite
-                  ]
-              ] )
-          ; ( SimdWaitWrite
-            , [ when_
-                  ppb.write_ready
-                  [ if_
-                      (iter.value <:. iter_per_lane - 1)
-                      [ write_addr <-- write_addr.value +:. 1
-                      ; read_addr <-- read_addr.value +:. 1
-                      ; iter <-- iter.value +:. 1
-                      ; state.set_next SimdWaitRead
+    if iter_per_lane = 1
+    then
+      compile
+        [ state.switch
+            [ ( Boot
+              , [ (* Fetch the initial sources using Stencil boot mode *)
+                  overflow_reg <--. 0
+                ; boot_d <--. 1
+                ; iter <--. 1
+                ; write_addr <--. 0
+                ; read_addr <--. 0
+                ; when_ i.sim_ready [ state.set_next SimdWaitData ]
+                ] )
+            ; SimdWaitRead, [ read_req_d <--. 1; state.set_next SimdWaitData ]
+            ; ( SimdWaitData
+              , [ when_
+                    (ppb.read_ready &: ppb.write_ready &: (i.sim_ready |: boot_d.value))
+                    [ state.set_next SimdExecute ]
+                ] )
+            ; ( SimdExecute
+              , let hit_nw_window = hit_nw_windows.(0) in
+                let hit_no_window = hit_no_windows.(0) in
+                let hit_ne_window = hit_ne_windows.(0) in
+                (List.init Config.simd_width ~f:(fun lane ->
+                   let stencil_lane = simd_ccurr.(lane) in
+                   let high = lane_high_bit lane in
+                   let low = lane_low_bit lane in
+                   let center = ppb.data_out.:[high, low] in
+                   (* StencilSIMD feeding *)
+                   [ hit_range.(lane)
+                     <-- Signal.concat_msb
+                           [ hit_nw_window.:[lane, lane]
+                           ; hit_no_window.:[lane, lane]
+                           ; hit_ne_window.:[lane, lane]
+                           ]
+                   ; (stencil_lane.nw
+                      <--
+                      if lane = 0
+                      then Signal.zero Config.simd_cell_width
+                      else
+                        ppb.data_out.:[lane_high_bit (lane - 1), lane_low_bit (lane - 1)]
+                     )
+                   ; stencil_lane.no <-- center
+                   ; (stencil_lane.ne
+                      <--
+                      if lane = Config.simd_width - 1
+                      then Signal.zero Config.simd_cell_width
+                      else
+                        ppb.data_out.:[lane_high_bit (lane + 1), lane_low_bit (lane + 1)]
+                     )
+                   ])
+                 |> List.concat)
+                @ [ when_
+                      simd.ready
+                      [ ppb_write_d <-- (Array.to_list simd.cnext |> Signal.concat_msb)
+                      ; write_req_d <--. 1
+                      ; when_ (simd.overflow <>:. 0) [ overflow_reg <--. 1 ]
+                      ; state.set_next SimdWaitWrite
                       ]
-                      [ state.set_next SimdFinished ]
-                  ]
-              ] )
-          ; ( SimdFinished
-            , [ boot_d <--. 0
-              ; iter <--. 0
-              ; swap_d <--. 1
-              ; write_addr <--. 0
-              ; read_addr <--. 0
-              ; if_
-                  (row_cntr.count ==:. Config.data_depth - 1)
-                  [ state.set_next AdderRead ]
-                  [ incr_d <--. 1; next_iter_ready_d <--. 1; state.set_next SimdWaitRead ]
-              ] )
-          ; AdderRead, [ read_req_d <--. 1; state.set_next AdderWaitRead ]
-          ; ( AdderWaitRead
-            , [ when_ ppb.read_ready [ adder_en_d <--. 1; state.set_next AdderExecute ] ]
-            )
-          ; ( AdderExecute
-            , [ adder_en_d <--. 1
-              ; when_
-                  adder_simd.ready
-                  [ when_ (adder_simd.carry <>:. 0) [ overflow_reg <--. 1 ]
-                  ; accu_en_d <--. 1
-                  ; state.set_next AdderWaitAccumulator
-                  ]
-              ] )
-          ; ( AdderWaitAccumulator
-            , [ accu_en_d <--. 1
-              ; when_
-                  sol_accu.ready
-                  [ if_
-                      (iter.value <:. iter_per_lane - 1)
-                      [ read_addr <-- read_addr.value +:. 1
-                      ; iter <-- iter.value +:. 1
-                      ; state.set_next AdderRead
+                  ] )
+            ; SimdWaitWrite, [ when_ ppb.write_ready [ state.set_next SimdFinished ] ]
+            ; ( SimdFinished
+              , [ boot_d <--. 0
+                ; swap_d <--. 1
+                ; if_
+                    (row_cntr.count ==:. Config.data_depth - 2)
+                    [ state.set_next AdderRead ]
+                    [ incr_d <--. 1
+                    ; next_iter_ready_d <--. 1
+                    ; state.set_next SimdWaitRead
+                    ]
+                ] )
+            ; AdderRead, [ read_req_d <--. 1; state.set_next AdderWaitRead ]
+            ; ( AdderWaitRead
+              , [ when_ ppb.read_ready [ adder_en_d <--. 1; state.set_next AdderExecute ]
+                ] )
+            ; ( AdderExecute
+              , [ adder_en_d <--. 1
+                ; when_
+                    adder_simd.ready
+                    [ when_ (adder_simd.carry <>:. 0) [ overflow_reg <--. 1 ]
+                    ; accu_en_d <--. 1
+                    ; state.set_next AdderWaitAccumulator
+                    ]
+                ] )
+            ; ( AdderWaitAccumulator
+              , [ accu_en_d <--. 1; when_ sol_accu.ready [ state.set_next Finished ] ] )
+            ; Finished, [ solution_ready_d <--. 1 ]
+            ]
+        ]
+    else (
+      let west_halos =
+        Array.init iter_per_lane ~f:(fun _ ->
+          Always.Variable.reg spec ~width:Config.simd_cell_width)
+      in
+      let east_halos =
+        Array.init iter_per_lane ~f:(fun _ ->
+          Always.Variable.reg spec ~width:Config.simd_cell_width)
+      in
+      compile
+        [ state.switch
+            [ ( LogicState.Boot
+              , [ (* Fetch the initial sources using Stencil boot mode *)
+                  iter <--. 0
+                ; overflow_reg <--. 0
+                ; boot_d <--. 1
+                ; when_ i.sim_ready [ state.set_next SimdWaitData ]
+                ] )
+            ; SimdWaitRead, [ read_req_d <--. 1; state.set_next SimdWaitData ]
+            ; ( SimdWaitData
+              , [ when_
+                    (ppb.read_ready &: ppb.write_ready)
+                    [ state.set_next SimdExecute ]
+                ] )
+            ; ( SimdExecute
+              , let hit_nw_window = mux iter.value (Array.to_list hit_nw_windows) in
+                let hit_no_window = mux iter.value (Array.to_list hit_no_windows) in
+                let hit_ne_window = mux iter.value (Array.to_list hit_ne_windows) in
+                let west_halo =
+                  mux
+                    iter.value
+                    (Signal.zero Config.simd_cell_width
+                     :: List.init (iter_per_lane - 1) ~f:(fun chunk ->
+                       west_halos.(chunk).value))
+                in
+                let east_halo =
+                  mux
+                    iter.value
+                    (List.init iter_per_lane ~f:(fun chunk ->
+                       if chunk < iter_per_lane - 1
+                       then east_halos.(chunk).value
+                       else Signal.zero Config.simd_cell_width))
+                in
+                (List.init Config.simd_width ~f:(fun lane ->
+                   let stencil_lane = simd_ccurr.(lane) in
+                   let high = lane_high_bit lane in
+                   let low = lane_low_bit lane in
+                   let center = ppb.data_out.:[high, low] in
+                   (* StencilSIMD feeding *)
+                   [ hit_range.(lane)
+                     <-- Signal.concat_msb
+                           [ hit_nw_window.:[lane, lane]
+                           ; hit_no_window.:[lane, lane]
+                           ; hit_ne_window.:[lane, lane]
+                           ]
+                   ; (stencil_lane.nw
+                      <--
+                      if lane = 0
+                      then west_halo
+                      else
+                        ppb.data_out.:[lane_high_bit (lane - 1), lane_low_bit (lane - 1)]
+                     )
+                   ; stencil_lane.no <-- center
+                   ; (stencil_lane.ne
+                      <--
+                      if lane = Config.simd_width - 1
+                      then east_halo
+                      else
+                        ppb.data_out.:[lane_high_bit (lane + 1), lane_low_bit (lane + 1)]
+                     )
+                   ]
+                   (* Save halos *)
+                   @ (if lane = Config.simd_width - 1
+                      then
+                        List.init iter_per_lane ~f:(fun chunk ->
+                          when_ (iter.value ==:. chunk) [ west_halos.(chunk) <-- center ])
+                      else [])
+                   @
+                   if lane = 0
+                   then
+                     List.init (iter_per_lane - 1) ~f:(fun chunk ->
+                       when_ (iter.value ==:. chunk + 1) [ east_halos.(chunk) <-- center ])
+                   else [])
+                 |> List.concat)
+                @ [ when_
+                      simd.ready
+                      [ ppb_write_d <-- (Array.to_list simd.cnext |> Signal.concat_msb)
+                      ; write_req_d <--. 1
+                      ; when_ (simd.overflow <>:. 0) [ overflow_reg <--. 1 ]
+                      ; state.set_next SimdWaitWrite
                       ]
-                      [ state.set_next Finished ]
-                  ]
-              ] )
-          ; Finished, [ solution_ready_d <--. 1 ]
-          ]
-      ];
+                  ] )
+            ; ( SimdWaitWrite
+              , [ when_
+                    ppb.write_ready
+                    [ if_
+                        (iter.value <:. iter_per_lane - 1)
+                        [ write_addr <-- write_addr.value +:. 1
+                        ; read_addr <-- read_addr.value +:. 1
+                        ; iter <-- iter.value +:. 1
+                        ; state.set_next SimdWaitRead
+                        ]
+                        [ state.set_next SimdFinished ]
+                    ]
+                ] )
+            ; ( SimdFinished
+              , [ boot_d <--. 0
+                ; iter <--. 0
+                ; swap_d <--. 1
+                ; write_addr <--. 0
+                ; read_addr <--. 0
+                ; if_
+                    (row_cntr.count ==:. Config.data_depth - 1)
+                    [ state.set_next AdderRead ]
+                    [ incr_d <--. 1
+                    ; next_iter_ready_d <--. 1
+                    ; state.set_next SimdWaitRead
+                    ]
+                ] )
+            ; AdderRead, [ read_req_d <--. 1; state.set_next AdderWaitRead ]
+            ; ( AdderWaitRead
+              , [ when_ ppb.read_ready [ adder_en_d <--. 1; state.set_next AdderExecute ]
+                ] )
+            ; ( AdderExecute
+              , [ adder_en_d <--. 1
+                ; when_
+                    adder_simd.ready
+                    [ when_ (adder_simd.carry <>:. 0) [ overflow_reg <--. 1 ]
+                    ; accu_en_d <--. 1
+                    ; state.set_next AdderWaitAccumulator
+                    ]
+                ] )
+            ; ( AdderWaitAccumulator
+              , [ accu_en_d <--. 1
+                ; when_
+                    sol_accu.ready
+                    [ if_
+                        (iter.value <:. iter_per_lane - 1)
+                        [ read_addr <-- read_addr.value +:. 1
+                        ; iter <-- iter.value +:. 1
+                        ; state.set_next AdderRead
+                        ]
+                        [ state.set_next Finished ]
+                    ]
+                ] )
+            ; Finished, [ solution_ready_d <--. 1 ]
+            ]
+        ]);
     { next_iter_ready = next_iter_ready_d.value
     ; solution_ready = solution_ready_d.value
     ; overflow = overflow_reg.value
