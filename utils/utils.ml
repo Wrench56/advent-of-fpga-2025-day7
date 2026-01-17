@@ -18,14 +18,24 @@ let cycle sim n =
   done
 ;;
 
+let preprocess_raw lst =
+  let is_empty_line line = String.for_all ~f:(fun char -> Char.equal char '.') line in
+  List.filter lst ~f:(fun line -> not (is_empty_line line))
+;;
+
 type grid =
   { width : int
   ; height : int
   ; rows : string array
   }
 
-let load_grid (path : string) : grid =
-  let lines = In_channel.with_open_text path In_channel.input_lines in
+let load_grid ?preprocess (path : string) : grid =
+  let lines =
+    let raw = In_channel.with_open_text path In_channel.input_lines in
+    match preprocess with
+    | Some true -> preprocess_raw raw
+    | _ -> raw
+  in
   match lines with
   | [] -> failwith "Gridfile is empty!"
   | first :: rest ->
