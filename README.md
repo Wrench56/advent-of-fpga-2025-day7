@@ -1,14 +1,14 @@
 # Jane Street's Advent of FPGA 2025 Day 7 in Hardcaml
 
-This repository contains my solutions written in Hardcaml for AoC Day 7 (Laboratories). My solution models the problem as two hardware engines:
+### Prolog: Learning OCaml and Hardcaml
 
-- Beam Engine that executes the cellular automata logic for beam propagation (and splitter hits)
-- Manifold Engine that computes the number of possible timelines that the particle took.
+This repository contains my solutions written in Hardcaml for AoC Day 7 (Laboratories).
 
+This challenge could not have come at a better time. For quite some time, the functional programming paradigm fascinated me. Similarly, FPGA development has been on my list for quite some time. I actually did try to learn SystemVerilog during early Fall of 2025 (well, if writing things like a Barrel Shifter counts...), but I got side-tracked by another projects such as [A Baremetal Hashmap Implementation in x64 Assembly](https://github.com/Wrench56/bmhm) and [OmniRouter](https://github.com/Wrench56/OmniRouter). However, reading the challenge description, I came to get to know Hardcaml. And for the second half of my winter break, I had the pleassure to learn OCaml and Hardcaml. I do love to use OCaml syntax for wiring logic a lot more than SystemVerilog (I have to admit, my lack of experience in SV might be the reason for that) and gladly recommand it to anyone wanting to learn a new HDL language.
 
 ## Usage
 
-[direnv](https://direnv.net/) installed, and [aliases](https://github.com/direnv/direnv/issues/73#issuecomment-2824427365) set up, you can use commands `bld` (to build the libraries and executables), `tst` (to run all testbenches), `iav` (to open the interactive waveform viewer), `gen` (to generate RTL), and `verif` (to generate bitstream for the ECP5 FPGA chip and to check timing constraints). In case you do not have `direnv` installed and aliases set up, you can just build the repository using `dune build .` and run the testbenches with `dune test .`. The executables are under `_build/default/interactive/interactive.exe` and `_build/default/gen/generate.exe`. The verification tool is under `tools/verify.sh`.
+If you have [direnv](https://direnv.net/) installed, and [aliases](https://github.com/direnv/direnv/issues/73#issuecomment-2824427365) set up, you can use commands `bld` (to build the libraries and executables), `tst` (to run all testbenches), `iav` (to open the interactive waveform viewer), `gen` (to generate RTL), and `verif` (to generate bitstream for the ECP5 FPGA chip and to check timing constraints). In case you do not have `direnv` installed and aliases set up, you can just build the repository using `dune build .` and run the testbenches with `dune test .`. The executables are under `_build/default/interactive/interactive.exe` and `_build/default/gen/generate.exe`. The verification tool is under `tools/verify.sh`.
 
 ## The Problem
 
@@ -134,9 +134,7 @@ This can be answered fairly easily by summing the last row's (`R`) timelines:
 
 ## Hardware Implementation
 
-### Learning Hardcaml for newbies
-
-Considering my very rudimentary HDL knowledge, I started by what I know from the software world: make your own library. It was fairly simple to see what common building blocks I might need to finish this project. And honestly, considering that I have never written a line of hardcaml before (and a week before this time point, I have never written a line in a functional programming language (let alone a specific one, like OCaml)) not throwing myself into deep waters seemed like a reasonable choice. After reading the [Hardcaml Manual](https://github.com/janestreet/hardcaml/blob/master/docs/index.md) (at least three times :D) and taking a look at [MIPS Implementation of Skvortsov et al.](https://github.com/askvortsov1/hardcaml-mips), I wrote the first LEGO building blocks. All of them can be found in the `src/common` directory. I had to first understand the hierarchical model in Hardcaml, which was fairly easy to pick up. Writing testbenches for such modules were also quite easy (after seeing some tricks from Skvortsov). The only thing that I wish I would have explored earlier was the interactive waveform viewer. It is hands down the best way to debug bigger logical units and its setup is well documented as well.
+Considering my very rudimentary HDL knowledge, I started by what I know from the software world: make your own library. It was fairly simple to see what common building blocks I might need to finish this project. And honestly, considering that I have never written a line of hardcaml before, not throwing myself into deep waters seemed like a reasonable choice. After reading the [Hardcaml Manual](https://github.com/janestreet/hardcaml/blob/master/docs/index.md) (at least three times :D) and taking a look at [MIPS Implementation of Skvortsov et al.](https://github.com/askvortsov1/hardcaml-mips), I wrote the first LEGO building blocks. All of them can be found in the `src/common` directory. I had to first understand the hierarchical model in Hardcaml, which was fairly easy to pick up. Writing testbenches for such modules were also quite easy (after seeing some tricks from Skvortsov). The only thing that I wish I would have explored earlier was the interactive waveform viewer. It is hands down the best way to debug bigger logical units and its setup is well documented as well.
 
 ### Part 1
 
@@ -187,10 +185,8 @@ Similarly to `BeamEngine`, the FSM states once again are broken into easily dige
 ![ManifoldEngine FSM States](assets/manifoldengine_fsm.png)
 
  - We begin in `Boot`, setting up some default values, enabling `boot_mode` and transitioning to `SimdWaitData` (skipping `SimdWaitRead` which would return a uniformly zero `ccurr`)
- - In `SimdWaitRead`, we request a read from the current memory address and advance to `SimdWaitData`
- - `SimdWaitData` waits until the ping pong RAM allows read & write operations again (as changing memory address for either read or write port takes n cycles to complete) and transitions to `SimdExecute` after
- - In `SimdExecute`, we select the SIMD window based on the iteration counter and feed both the `hit_splitter` window and the current `ccurr` output to `StencilSIMD`. Because each `Stencil` lane needs access to its immediate neighbors, the SIMD window includes a one-cell "halo" on each side. When we step the window across the row, we overlap these halos so that each lane always sees a consisten `NW`, `N`, `NE` neighborhood. Then we transition to `SimdWaitSimd`
- - `SimdWaitSimd` waits until the `StencilSIMD` finished the calculation (currently, the `StencilSIMD` is entirely combinational, so this explicit wait is redundant), writes the SIMD output into the ping pong RAM, sets the `overflow` register (marking whether an error happened) and transitions to `SimdWaitWrite`
+ - In `SimdWaitRead`, we request a read from the current memory address and wait until the ping pong RAM allows read & write operations again (as changing memory address for either read or write port takes n cycles to complete) and whether `BeamEngine` finished the next `hit_splitters` calculation. Then we transitions to `SimdExecute` after
+ - In `SimdExecute`, we select the SIMD window based on the iteration counter and feed both the `hit_splitter` window and the current `ccurr` output to `StencilSIMD`. Because each `Stencil` lane needs access to its immediate neighbors, the SIMD window includes a one-cell "halo" on each side. When we step the window across the row, we overlap these halos so that each lane always sees a consisten `NW`, `N`, `NE` neighborhood. Waits until the `StencilSIMD` finished the calculation (currently, the `StencilSIMD` is entirely combinational, so this explicit wait is redundant), writes the SIMD output into the ping pong RAM, sets the `overflow` register (marking whether an error happened) and transitions to `SimdWaitWrite`
  - `SimdWaitWrite` waits until the ping pong buffer finished the write operation and then checks if we reached the final iteration within the row (as in we fed all windows of the row to SIMD) and transitions to `SimdFinished` if so, otherwise increments the read and write memory addresses and the iteration counter and loops back to `SimdWaitRead`
  - In `SimdFinished`, we disable the `boot_mode` (this ensures that after the first full SIMD feeding of the initial source row finished, the `Stencil`-s return to normal computation), zero out the iteration counter, swap the ping pong RAM and zero out both of its addresses, and iff we reached the final row, transition to `AdderRead`, otherwise increment row count, signal `SLatch` using `next_iter_ready` that we are ready to consume more data and loops back to `SimdWaitRead`
  - In `AdderRead`, we request the ping pong RAM to fetch the current memory address and advances to `AdderWaitRead`
@@ -203,3 +199,128 @@ Intuitively, we loop for i iterations of rows (where the loop "body" is from `Si
 ### Toplevel
 
 The two engines, the RAM/ROM, the `SLatch`, and the slatch ready logic (called `Logic` on the schematic of `BeamEngine`) are connected all together in the `Top` module. The module is responsible for combining the `next_iter_ready` pulses from both `BeamEngine` and `ManifoldEngine`. Essentially, whenever the `Logic` block receives a pulse, it stores that into a register and waits until the other engine is finished with the current iteration, clearing both of these registers after a pulse to the `SLatch` requesting the next memory word (next row if you will). It also ensures that the first pulse to `SLatch` happens during boot period.
+
+## Results
+
+I will include a few of the result I got for my `inputs.txt`. The input width was 141, so I padded it out with 3 extra empty spaces (`.`).
+
+### Settings
+
+| Trial | data_width | data_depth | Maxnum part 1 | Maxnum part 2 | mem_fetch_delay | mem_write_delay | simd_width | simd_cell_width | Fmax | Cycles | Total time |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Trial #1 | 144 | 142 | (2^50) - 1 | (2^50) - 1 | 0 | 0 | 9 | 44 | 69.54 MHz | 9381 cycles | 0.000106057s |
+
+### Trial #1
+
+```
+=== top ===
+
+        +----------Local Count, excluding submodules.
+        |
+     7475 wires
+    54895 wire bits
+     7475 public wires
+    54895 public wire bits
+        6 ports
+       70 port bits
+       37 cells
+       33   $scopeinfo
+        4   DP16KD
+     9230 submodules
+      515   CCU2C
+      174   L6MUX21
+     5209   LUT4
+      791   PFUMX
+      198   TRELLIS_DPR16X4
+     2343   TRELLIS_FF
+
+=== design hierarchy ===
+
+        +----------Count including submodules.
+        |
+       37 top
+
+        +----------Count including submodules.
+        |
+     7475 wires
+    54895 wire bits
+     7475 public wires
+    54895 public wire bits
+        6 ports
+       70 port bits
+        - memories
+        - memory bits
+        - processes
+       37 cells
+       33   $scopeinfo
+        4   DP16KD
+     9230 submodules
+      515   CCU2C
+      174   L6MUX21
+     5209   LUT4
+      791   PFUMX
+      198   TRELLIS_DPR16X4
+     2343   TRELLIS_FF
+
+2.50. Executing CHECK pass (checking for obvious problems).
+Checking module top...
+Found and reported 0 problems.
+
+2.51. Executing JSON backend.
+
+End of script. Logfile hash: 8fed37050b, CPU: user 10.54s system 0.18s, MEM: 426.30 MB peak
+Yosys 0.61+18 (git sha1 763001885, g++ 15.2.1 -march=native -O3 -fno-plt -fexceptions -fstack-clash-protection -fcf-protection -flto=auto -fPIC -O3)
+Time spent: 36% 1x abc9_exe (6 sec), 23% 1x autoname (3 sec), ...
+
+
+Info: Logic utilisation before packing:
+Info:     Total LUT4s:      7427/83640     8%
+Info:         logic LUTs:   5209/83640     6%
+Info:         carry LUTs:   1030/83640     1%
+Info:           RAM LUTs:    792/10455     7%
+Info:          RAMW LUTs:    396/20910     1%
+
+Info:      Total DFFs:      2343/83640     2%
+
+Info: Packing IOs..
+Info: Packing constants..
+Info: Packing carries...
+Info: Packing LUTs...
+Info: Packing LUT5-7s...
+Info: Packing FFs...
+Info:     815 FFs paired with LUTs.
+Info: Generating derived timing constraints...
+Info: Promoting globals...
+Info:     promoting clock net clock$TRELLIS_IO_IN to global network
+Info: Checksum: 0x73c52058
+
+Info: Device utilisation:
+Info: 	          TRELLIS_IO:      70/    365    19%
+Info: 	                DCCA:       1/     56     1%
+Info: 	              DP16KD:       4/    208     1%
+Info: 	          MULT18X18D:       0/    156     0%
+Info: 	              ALU54B:       0/     78     0%
+Info: 	             EHXPLLL:       0/      4     0%
+Info: 	             EXTREFB:       0/      2     0%
+Info: 	                DCUA:       0/      2     0%
+Info: 	           PCSCLKDIV:       0/      2     0%
+Info: 	             IOLOGIC:       0/    224     0%
+Info: 	            SIOLOGIC:       0/    141     0%
+Info: 	                 GSR:       0/      1     0%
+Info: 	               JTAGG:       0/      1     0%
+Info: 	                OSCG:       0/      1     0%
+Info: 	               SEDGA:       0/      1     0%
+Info: 	                 DTR:       0/      1     0%
+Info: 	             USRMCLK:       0/      1     0%
+Info: 	             CLKDIVF:       0/      4     0%
+Info: 	           ECLKSYNCB:       0/     10     0%
+Info: 	             DLLDELD:       0/      8     0%
+Info: 	              DDRDLL:       0/      4     0%
+Info: 	             DQSBUFM:       0/     14     0%
+Info: 	     TRELLIS_ECLKBUF:       0/      8     0%
+Info: 	        ECLKBRIDGECS:       0/      2     0%
+Info: 	                DCSC:       0/      2     0%
+Info: 	          TRELLIS_FF:    2343/  83640     2%
+Info: 	        TRELLIS_COMB:    7537/  83640     9%
+Info: 	        TRELLIS_RAMW:     198/  10455     1%
+```
