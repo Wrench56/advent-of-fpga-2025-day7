@@ -146,7 +146,12 @@ let command =
          (optional_with_default 8 int)
          ~doc:"INT The width of the Manifold Engine's SIMD"
      and preprocess =
-       flag "preprocess" no_arg ~doc:"Runs the input file through the preprocessor"
+       flag
+         "preprocess"
+         no_arg
+         ~doc:
+           "Runs the input file through the preprocessor (USE IT STRICTLY WITH \
+            SIMD_WIDTH = DATA_WIDTH!)"
      in
      fun () -> gen_top ~lang ~is_rom:(not ram) ~input_file ~simd_width ~preprocess)
 ;;
