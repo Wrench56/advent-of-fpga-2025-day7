@@ -61,7 +61,7 @@ let boolrows_of_string string_repr =
       | _ -> false))
 ;;
 
-let gen_top ~lang ~input_file ~is_rom ~simd_width =
+let gen_top ~lang ~input_file ~is_rom ~simd_width ~preprocess =
   (* Standard example from Advent of Code Day 7 *)
   let default_input =
     [ ".......S........"
@@ -87,7 +87,7 @@ let gen_top ~lang ~input_file ~is_rom ~simd_width =
     then (
       match input_file with
       | Some path ->
-        let grid = Utils.load_grid path in
+        let grid = Utils.load_grid ~preprocess path in
         grid.width, grid.height, Some (boolrows_of_string (grid.rows |> Array.to_list))
       | None -> 16, 16, Some (boolrows_of_string default_input))
     else 16, 16, None
@@ -104,12 +104,12 @@ let gen_top ~lang ~input_file ~is_rom ~simd_width =
     Make_Top (struct
       let data_width = data_width
       let data_depth = data_depth
-      let max_num1 = Int.pow 2 32 - 1
-      let max_num2 = Int.pow 2 32 - 1
+      let max_num1 = Int.pow 2 16 - 1
+      let max_num2 = Int.pow 2 50 - 1
       let mem_fetch_delay = 0
       let mem_write_delay = 0
       let simd_width = simd_width
-      let simd_cell_width = 32
+      let simd_cell_width = 44
       let rom_content = rom_content
     end)
   in
@@ -145,8 +145,10 @@ let command =
          "simd-width"
          (optional_with_default 8 int)
          ~doc:"INT The width of the Manifold Engine's SIMD"
+     and preprocess =
+       flag "preprocess" no_arg ~doc:"Runs the input file through the preprocessor"
      in
-     fun () -> gen_top ~lang ~is_rom:(not ram) ~input_file ~simd_width)
+     fun () -> gen_top ~lang ~is_rom:(not ram) ~input_file ~simd_width ~preprocess)
 ;;
 
 let () = Command_unix.run ~version:"1.0.0" command
