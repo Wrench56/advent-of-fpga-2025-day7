@@ -38,7 +38,8 @@ struct
   module LogicState = struct
     type t =
       | Boot
-      | SimdRead
+      | SimdWaitRead
+      | SimdWaitData
       | SimdExecute
       | SimdWaitWrite
       | SimdFinished
@@ -216,11 +217,11 @@ struct
                 ; iter <--. 1
                 ; write_addr <--. 0
                 ; read_addr <--. 0
-                ; when_ i.sim_ready [ state.set_next SimdRead ]
+                ; when_ i.sim_ready [ state.set_next SimdWaitData ]
                 ] )
-            ; ( SimdRead
-              , [ read_req_d <--. 1
-                ; when_
+            ; SimdWaitRead, [ read_req_d <--. 1; state.set_next SimdWaitData ]
+            ; ( SimdWaitData
+              , [ when_
                     (ppb.read_ready &: ppb.write_ready &: (i.sim_ready |: boot_d.value))
                     [ state.set_next SimdExecute ]
                 ] )
@@ -272,7 +273,10 @@ struct
                 ; if_
                     (row_cntr.count ==:. Config.data_depth - 2)
                     [ state.set_next AdderRead ]
-                    [ incr_d <--. 1; next_iter_ready_d <--. 1; state.set_next SimdRead ]
+                    [ incr_d <--. 1
+                    ; next_iter_ready_d <--. 1
+                    ; state.set_next SimdWaitRead
+                    ]
                 ] )
             ; AdderRead, [ read_req_d <--. 1; state.set_next AdderWaitRead ]
             ; ( AdderWaitRead
@@ -308,11 +312,13 @@ struct
                   iter <--. 0
                 ; overflow_reg <--. 0
                 ; boot_d <--. 1
-                ; when_ i.sim_ready [ state.set_next SimdRead ]
+                ; when_ i.sim_ready [ state.set_next SimdWaitData ]
                 ] )
-            ; ( SimdRead
-              , [ read_req_d <--. 1
-                ; when_ (ppb.read_ready &: ppb.write_ready) [ state.set_next SimdExecute ]
+            ; SimdWaitRead, [ read_req_d <--. 1; state.set_next SimdWaitData ]
+            ; ( SimdWaitData
+              , [ when_
+                    (ppb.read_ready &: ppb.write_ready)
+                    [ state.set_next SimdExecute ]
                 ] )
             ; ( SimdExecute
               , let hit_nw_window = mux iter.value (Array.to_list hit_nw_windows) in
@@ -390,7 +396,7 @@ struct
                         [ write_addr <-- write_addr.value +:. 1
                         ; read_addr <-- read_addr.value +:. 1
                         ; iter <-- iter.value +:. 1
-                        ; state.set_next SimdRead
+                        ; state.set_next SimdWaitRead
                         ]
                         [ state.set_next SimdFinished ]
                     ]
@@ -404,7 +410,10 @@ struct
                 ; if_
                     (row_cntr.count ==:. Config.data_depth - 1)
                     [ state.set_next AdderRead ]
-                    [ incr_d <--. 1; next_iter_ready_d <--. 1; state.set_next SimdRead ]
+                    [ incr_d <--. 1
+                    ; next_iter_ready_d <--. 1
+                    ; state.set_next SimdWaitRead
+                    ]
                 ] )
             ; AdderRead, [ read_req_d <--. 1; state.set_next AdderWaitRead ]
             ; ( AdderWaitRead
