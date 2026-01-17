@@ -134,17 +134,15 @@ struct
                   [ beams_next <-- i.mem_data
                   ; if_
                       ~:(boot_mode_done.value)
-                      [ hit_reg <-- i.mem_data
-                      ; hit_splitters_ready_d <--. 1
-                      ; boot_mode_done <--. 1
-                      ]
+                      [ hit_reg <-- i.mem_data; boot_mode_done <--. 1 ]
                       []
                   ; swap_imp <--. 1
                   ; state.set_next FetchSplitters
                   ]
               ] )
           ; ( FetchSplitters
-            , [ if_
+            , [ hit_splitters_ready_d <--. 1
+              ; if_
                   (internal_cntr.count <:. Config.data_depth - 1)
                   [ slatch_next_cycle <--. 1
                   ; incr_internal_cntr <--. 1
@@ -162,11 +160,14 @@ struct
                  let shr_hit_spl = srl hit_splitters 1 in
                  let unhit = ppb.data_out &: ~:hit_splitters in
                  unhit |: shl_hit_spl |: shr_hit_spl)
-              ; hit_splitters_ready_d <--. 1
               ; swap_imp <--. 1
               ; state.set_next Popcount
               ] )
-          ; Popcount, [ automata_finished <--. 1; state.set_next PopcountWait ]
+          ; ( Popcount
+            , [ hit_splitters_ready_d <--. 1
+              ; automata_finished <--. 1
+              ; state.set_next PopcountWait
+              ] )
           ; ( PopcountWait
             , [ automata_finished <--. 1
               ; when_ popcntr.ready [ popcount_finished <--. 1; state.set_next AccuWait ]
@@ -179,7 +180,7 @@ struct
           ]
       ];
     { next_iter_ready = slatch_next_cycle.value
-    ; hit_splitters_ready = Signal.pipeline ~n:1 spec hit_splitters_ready_d.value
+    ; hit_splitters_ready = hit_splitters_ready_d.value
     ; hit_splitters = hit_reg.value
     ; solution_ready = solution_ready.value
     ; solution = accu.sum
